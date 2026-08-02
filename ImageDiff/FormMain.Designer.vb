@@ -30,6 +30,7 @@ Partial Class FormMain
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         Me.Button_Select = New System.Windows.Forms.Button()
         Me.GroupBox1 = New System.Windows.Forms.GroupBox()
+        Me.CheckBox_Caching = New System.Windows.Forms.CheckBox()
         Me.ComboBox_HashingQuality = New System.Windows.Forms.ComboBox()
         Me.Label5 = New System.Windows.Forms.Label()
         Me.Label4 = New System.Windows.Forms.Label()
@@ -45,6 +46,12 @@ Partial Class FormMain
         Me.GroupBox3 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageAPreview = New System.Windows.Forms.PictureBox()
         Me.SplitContainer1 = New System.Windows.Forms.SplitContainer()
+        Me.ListViewEx_Images = New ImageDiff.ClassListViewEx()
+        Me.ColumnHeader4 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader5 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader8 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader9 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader10 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.SplitContainer2 = New System.Windows.Forms.SplitContainer()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageBPreview = New System.Windows.Forms.PictureBox()
@@ -60,21 +67,14 @@ Partial Class FormMain
         Me.FileAToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.FileBToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.StatusStrip1 = New System.Windows.Forms.StatusStrip()
-        Me.ToolStripStatusLabel_Progress = New System.Windows.Forms.ToolStripStatusLabel()
         Me.ToolStripProgressBar_Progress = New System.Windows.Forms.ToolStripProgressBar()
+        Me.ToolStripStatusLabel_Progress = New System.Windows.Forms.ToolStripStatusLabel()
         Me.ColumnHeader2 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader6 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader7 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader1 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader3 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.CheckBox_Caching = New System.Windows.Forms.CheckBox()
         Me.ToolTip1 = New System.Windows.Forms.ToolTip(Me.components)
-        Me.ListViewEx_Images = New ImageDiff.ClassListViewEx()
-        Me.ColumnHeader4 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader5 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader8 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader9 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader10 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
@@ -137,6 +137,19 @@ Partial Class FormMain
         Me.GroupBox1.TabIndex = 1
         Me.GroupBox1.TabStop = False
         Me.GroupBox1.Text = "Image directory"
+        '
+        'CheckBox_Caching
+        '
+        Me.CheckBox_Caching.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.CheckBox_Caching.AutoSize = True
+        Me.CheckBox_Caching.Location = New System.Drawing.Point(649, 104)
+        Me.CheckBox_Caching.Name = "CheckBox_Caching"
+        Me.CheckBox_Caching.Size = New System.Drawing.Size(105, 17)
+        Me.CheckBox_Caching.TabIndex = 11
+        Me.CheckBox_Caching.Text = "Use hash cache"
+        Me.ToolTip1.SetToolTip(Me.CheckBox_Caching, "When enabled, hashes will be saved and loaded when needed to speed up the hasing " &
+        "process.")
+        Me.CheckBox_Caching.UseVisualStyleBackColor = True
         '
         'ComboBox_HashingQuality
         '
@@ -302,6 +315,44 @@ Partial Class FormMain
         Me.SplitContainer1.SplitterDistance = 486
         Me.SplitContainer1.TabIndex = 4
         '
+        'ListViewEx_Images
+        '
+        Me.ListViewEx_Images.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader4, Me.ColumnHeader5, Me.ColumnHeader8, Me.ColumnHeader9, Me.ColumnHeader10})
+        Me.ListViewEx_Images.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ListViewEx_Images.HideSelection = False
+        Me.ListViewEx_Images.Location = New System.Drawing.Point(0, 0)
+        Me.ListViewEx_Images.m_SetSortingColumn = True
+        Me.ListViewEx_Images.Name = "ListViewEx_Images"
+        Me.ListViewEx_Images.Size = New System.Drawing.Size(486, 460)
+        Me.ListViewEx_Images.TabIndex = 0
+        Me.ListViewEx_Images.UseCompatibleStateImageBehavior = False
+        Me.ListViewEx_Images.View = System.Windows.Forms.View.Details
+        '
+        'ColumnHeader4
+        '
+        Me.ColumnHeader4.Text = "File A"
+        Me.ColumnHeader4.Width = 200
+        '
+        'ColumnHeader5
+        '
+        Me.ColumnHeader5.Text = "File B"
+        Me.ColumnHeader5.Width = 200
+        '
+        'ColumnHeader8
+        '
+        Me.ColumnHeader8.Text = "Difference"
+        Me.ColumnHeader8.Width = 75
+        '
+        'ColumnHeader9
+        '
+        Me.ColumnHeader9.Text = "Size A"
+        Me.ColumnHeader9.Width = 75
+        '
+        'ColumnHeader10
+        '
+        Me.ColumnHeader10.Text = "Size B"
+        Me.ColumnHeader10.Width = 75
+        '
         'SplitContainer2
         '
         Me.SplitContainer2.Dock = System.Windows.Forms.DockStyle.Fill
@@ -422,18 +473,18 @@ Partial Class FormMain
         Me.StatusStrip1.TabIndex = 5
         Me.StatusStrip1.Text = "StatusStrip1"
         '
+        'ToolStripProgressBar_Progress
+        '
+        Me.ToolStripProgressBar_Progress.Name = "ToolStripProgressBar_Progress"
+        Me.ToolStripProgressBar_Progress.Size = New System.Drawing.Size(100, 16)
+        Me.ToolStripProgressBar_Progress.Visible = False
+        '
         'ToolStripStatusLabel_Progress
         '
         Me.ToolStripStatusLabel_Progress.Name = "ToolStripStatusLabel_Progress"
         Me.ToolStripStatusLabel_Progress.Size = New System.Drawing.Size(119, 17)
         Me.ToolStripStatusLabel_Progress.Text = "ToolStripStatusLabel1"
         Me.ToolStripStatusLabel_Progress.Visible = False
-        '
-        'ToolStripProgressBar_Progress
-        '
-        Me.ToolStripProgressBar_Progress.Name = "ToolStripProgressBar_Progress"
-        Me.ToolStripProgressBar_Progress.Size = New System.Drawing.Size(100, 16)
-        Me.ToolStripProgressBar_Progress.Visible = False
         '
         'ColumnHeader2
         '
@@ -458,59 +509,11 @@ Partial Class FormMain
         '
         Me.ColumnHeader3.Text = "Size B"
         '
-        'CheckBox_Caching
-        '
-        Me.CheckBox_Caching.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.CheckBox_Caching.AutoSize = True
-        Me.CheckBox_Caching.Location = New System.Drawing.Point(649, 104)
-        Me.CheckBox_Caching.Name = "CheckBox_Caching"
-        Me.CheckBox_Caching.Size = New System.Drawing.Size(105, 17)
-        Me.CheckBox_Caching.TabIndex = 11
-        Me.CheckBox_Caching.Text = "Use hash cache"
-        Me.ToolTip1.SetToolTip(Me.CheckBox_Caching, "When enabled, hashes will be saved and loaded when needed to speed up the hasing " &
-        "process.")
-        Me.CheckBox_Caching.UseVisualStyleBackColor = True
-        '
-        'ListViewEx_Images
-        '
-        Me.ListViewEx_Images.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader4, Me.ColumnHeader5, Me.ColumnHeader8, Me.ColumnHeader9, Me.ColumnHeader10})
-        Me.ListViewEx_Images.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.ListViewEx_Images.HideSelection = False
-        Me.ListViewEx_Images.Location = New System.Drawing.Point(0, 0)
-        Me.ListViewEx_Images.m_SetSortingColumn = True
-        Me.ListViewEx_Images.Name = "ListViewEx_Images"
-        Me.ListViewEx_Images.Size = New System.Drawing.Size(486, 460)
-        Me.ListViewEx_Images.TabIndex = 0
-        Me.ListViewEx_Images.UseCompatibleStateImageBehavior = False
-        Me.ListViewEx_Images.View = System.Windows.Forms.View.Details
-        '
-        'ColumnHeader4
-        '
-        Me.ColumnHeader4.Text = "File A"
-        Me.ColumnHeader4.Width = 200
-        '
-        'ColumnHeader5
-        '
-        Me.ColumnHeader5.Text = "File B"
-        Me.ColumnHeader5.Width = 200
-        '
-        'ColumnHeader8
-        '
-        Me.ColumnHeader8.Text = "Difference"
-        Me.ColumnHeader8.Width = 75
-        '
-        'ColumnHeader9
-        '
-        Me.ColumnHeader9.Text = "Size A"
-        Me.ColumnHeader9.Width = 75
-        '
-        'ColumnHeader10
-        '
-        Me.ColumnHeader10.Text = "Size B"
-        Me.ColumnHeader10.Width = 75
-        '
         'TabControl1
         '
+        Me.TabControl1.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
+            Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.TabControl1.Controls.Add(Me.TabPage1)
         Me.TabControl1.Controls.Add(Me.TabPage2)
         Me.TabControl1.Location = New System.Drawing.Point(12, 150)

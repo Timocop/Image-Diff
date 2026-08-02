@@ -595,7 +595,7 @@ Public Class FormMain
                             For i = 0 To iThreads - 1
                                 Dim mData As New Dictionary(Of String, Object)
                                 mData("FilesThreads") = mFilesThreads
-                                mData("TotalFiles") = New List(Of String)(sFiles)
+                                mData("TotalFiles") = sFiles
                                 mData("ImageInfo") = mImageInfo
                                 mData("ThreadInfo") = mThreadInfo
 
@@ -628,7 +628,7 @@ Public Class FormMain
                                     iFilesLast = iFiles
                                     Dim mTimeLeft As New TimeSpan(0, 0, CInt((sFiles.Length - iFiles) / iFilesPerSec))
 
-                                    While (mLastFilesPerSec.Count > 100)
+                                    While (mLastFilesPerSec.Count > 10)
                                         mLastFilesPerSec.Dequeue()
                                     End While
 
@@ -731,7 +731,7 @@ Public Class FormMain
             Dim mData = DirectCast(x, Dictionary(Of String, Object))
 
             Dim mFilesThreads = DirectCast(mData("FilesThreads"), Queue(Of String))
-            Dim mTotalFiles = DirectCast(mData("TotalFiles"), List(Of String))
+            Dim sTotalFiles = DirectCast(mData("TotalFiles"), String())
             Dim mImageInfo = DirectCast(mData("ImageInfo"), List(Of STRUC_IMAGE_INFO))
             Dim mThreadInfo = DirectCast(mData("ThreadInfo"), Dictionary(Of String, Object))
 
@@ -740,13 +740,9 @@ Public Class FormMain
             Dim iHashingMethod = DirectCast(mData("HashingMethod"), ENUM_HASHING_METHOD)
             Dim iThumbSize = DirectCast(mData("ThumbSize"), Integer)
 
-            Dim sTotalFiles As String() = {}
+            Dim mTotalFilesList As New List(Of String)(sTotalFiles)
 
             Dim MAX_FILE_SIZE As Integer = 100 * 1024 * 1024
-
-            SyncLock g_mLock
-                sTotalFiles = mTotalFiles.ToArray
-            End SyncLock
 
             While True
                 Try
@@ -761,6 +757,8 @@ Public Class FormMain
 
                         mThreadInfo("Files") = CInt(mThreadInfo("Files")) + 1
                     End SyncLock
+
+                    mTotalFilesList.Remove(sFileA)
 
                     Dim iFileAState = m_FileState(sFileA)
                     If (iFileAState = ENUM_FILE_CHECK.FAILED) Then
@@ -804,7 +802,7 @@ Public Class FormMain
                                 CalculateAverageHash(sFileA, CUInt(iThumbSize))
                         End Select
                     Else
-                        For Each sFileB As String In sTotalFiles
+                        For Each sFileB As String In mTotalFilesList
                             Try
                                 If (sFileA.ToLowerInvariant = sFileB.ToLowerInvariant) Then
                                     Continue For
@@ -861,7 +859,7 @@ Public Class FormMain
                                 SyncLock g_mLock
                                     Dim bSkip As Boolean = False
                                     For Each mItem In mImageInfo
-                                        If (sFileA.ToLowerInvariant = mItem.sFileB.ToLowerInvariant OrElse
+                                        If (sFileA.ToLowerInvariant = mItem.sFileB.ToLowerInvariant AndAlso
                                             sFileB.ToLowerInvariant = mItem.sFileA.ToLowerInvariant) Then
                                             bSkip = True
                                             Exit For
