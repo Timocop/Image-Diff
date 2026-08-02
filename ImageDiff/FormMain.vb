@@ -440,7 +440,7 @@ Public Class FormMain
         Property m_UseCaching As Boolean
 
         Private g_mLock As New Object
-        Private g_mHashCache As New Dictionary(Of String, String)
+        Private g_mHashCache As New Dictionary(Of String, Byte())
         Private g_mFileState As New Dictionary(Of String, ENUM_FILE_CHECK)
 
         Public Sub New(_FormMain As FormMain,
@@ -488,7 +488,7 @@ Public Class FormMain
             End Get
         End Property
 
-        Private Property m_HashCache(sFile As String) As String
+        Private Property m_HashCache(sFile As String) As Byte()
             Get
                 SyncLock g_mLock
                     If (Not g_mHashCache.ContainsKey(sFile.ToLowerInvariant)) Then
@@ -498,7 +498,7 @@ Public Class FormMain
                     Return g_mHashCache(sFile.ToLowerInvariant)
                 End SyncLock
             End Get
-            Set(value As String)
+            Set(value As Byte())
                 SyncLock g_mLock
                     g_mHashCache(sFile.ToLowerInvariant) = value
                 End SyncLock
@@ -514,6 +514,10 @@ Public Class FormMain
         Private Property m_FileState(sFile As String) As ENUM_FILE_CHECK
             Get
                 SyncLock g_mLock
+                    If (m_HashCache(sFile) IsNot Nothing) Then
+                        Return ENUM_FILE_CHECK.PASSED
+                    End If
+
                     If (Not g_mFileState.ContainsKey(sFile.ToLowerInvariant)) Then
                         Return ENUM_FILE_CHECK.NOT_CHECKED
                     End If
@@ -758,7 +762,8 @@ Public Class FormMain
                         mThreadInfo("Files") = CInt(mThreadInfo("Files")) + 1
                     End SyncLock
 
-                    If (m_FileState(sFileA) = ENUM_FILE_CHECK.FAILED) Then
+                    Dim iFileAState = m_FileState(sFileA)
+                    If (iFileAState = ENUM_FILE_CHECK.FAILED) Then
                         Continue While
                     End If
 
@@ -771,8 +776,7 @@ Public Class FormMain
                         Continue While
                     End If
 
-                    If (m_HashCache(sFileA) Is Nothing AndAlso
-                        m_FileState(sFileA) <> ENUM_FILE_CHECK.PASSED) Then
+                    If (iFileAState <> ENUM_FILE_CHECK.PASSED) Then
                         Try
                             Select Case (iHashingMethod)
                                 Case ENUM_HASHING_METHOD.MAGICK
@@ -806,7 +810,8 @@ Public Class FormMain
                                     Continue For
                                 End If
 
-                                If (m_FileState(sFileB) = ENUM_FILE_CHECK.FAILED) Then
+                                Dim iFileBState = m_FileState(sFileB)
+                                If (iFileBState = ENUM_FILE_CHECK.FAILED) Then
                                     Continue For
                                 End If
 
@@ -820,8 +825,7 @@ Public Class FormMain
                                     Continue For
                                 End If
 
-                                If (m_HashCache(sFileB) Is Nothing AndAlso
-                                    m_FileState(sFileB) <> ENUM_FILE_CHECK.PASSED) Then
+                                If (iFileBState <> ENUM_FILE_CHECK.PASSED) Then
                                     Try
                                         Select Case (iHashingMethod)
                                             Case ENUM_HASHING_METHOD.MAGICK
@@ -885,40 +889,40 @@ Public Class FormMain
         End Sub
 
         Public Function ImageCompareAverageMagick(sFileA As String, sFileB As String, Optional ByVal iThumbSize As UInteger = 8) As Double
-            Dim sHashA As String = m_HashCache(sFileA)
-            Dim sHashB As String = m_HashCache(sFileB)
+            Dim iHashA As Byte() = m_HashCache(sFileA)
+            Dim iHashB As Byte() = m_HashCache(sFileB)
 
-            If (sHashA Is Nothing) Then
+            If (iHashA Is Nothing) Then
                 Using mHashA As New ImageMagick.MagickImage(sFileA)
-                    sHashA = CalculatePerceptualHash(mHashA, iThumbSize)
-                    m_HashCache(sFileA) = sHashA
+                    iHashA = CalculatePerceptualHash(mHashA, iThumbSize)
+                    m_HashCache(sFileA) = iHashA
                 End Using
             End If
 
-            If (sHashB Is Nothing) Then
+            If (iHashB Is Nothing) Then
                 Using mHashB As New ImageMagick.MagickImage(sFileB)
-                    sHashB = CalculatePerceptualHash(mHashB, iThumbSize)
-                    m_HashCache(sFileB) = sHashB
+                    iHashB = CalculatePerceptualHash(mHashB, iThumbSize)
+                    m_HashCache(sFileB) = iHashB
                 End Using
             End If
 
-            Return CalculateHashSimilarity(sHashA, sHashB)
+            Return CalculateHashSimilarity(iHashA, iHashB)
         End Function
 
-        Public Function CalculatePerceptualHash(sFile As String, Optional ByVal iThumbSize As UInteger = 8) As String
-            Dim sHash As String = m_HashCache(sFile)
+        Public Function CalculatePerceptualHash(sFile As String, Optional ByVal iThumbSize As UInteger = 8) As Byte()
+            Dim iHash As Byte() = m_HashCache(sFile)
 
-            If (sHash Is Nothing) Then
+            If (iHash Is Nothing) Then
                 Using mImage As New ImageMagick.MagickImage(sFile)
-                    sHash = CalculatePerceptualHash(mImage, iThumbSize)
-                    m_HashCache(sFile) = sHash
+                    iHash = CalculatePerceptualHash(mImage, iThumbSize)
+                    m_HashCache(sFile) = iHash
                 End Using
             End If
 
-            Return sHash
+            Return iHash
         End Function
 
-        Public Function CalculatePerceptualHash(mImage As ImageMagick.MagickImage, Optional ByVal iThumbSize As UInteger = 8) As String
+        Public Function CalculatePerceptualHash(mImage As ImageMagick.MagickImage, Optional ByVal iThumbSize As UInteger = 8) As Byte()
             Using mThumbImage As New ImageMagick.MagickImage(mImage)
                 Dim mThumbGeo As New ImageMagick.MagickGeometry(iThumbSize, iThumbSize)
                 mThumbGeo.IgnoreAspectRatio = True
@@ -949,54 +953,58 @@ Public Class FormMain
                 Next
                 Dim iAverage As Double = iTotal / mPixelVal.Count
 
-                Dim sHashBits As New Text.StringBuilder(CInt(iThumbSize * iThumbSize))
+                Dim iHashBits(CInt(iThumbSize * iThumbSize) - 1) As Byte
+                Dim iHashBitCount As Integer = 0
+
                 For Each mVal As UShort In mPixelVal
                     If (mVal >= iAverage) Then
-                        sHashBits.Append("1")
+                        iHashBits(iHashBitCount) = 1
+                        iHashBitCount += 1
                     Else
-                        sHashBits.Append("0")
+                        iHashBits(iHashBitCount) = 0
+                        iHashBitCount += 1
                     End If
                 Next
 
-                Return sHashBits.ToString()
+                Return iHashBits
             End Using
         End Function
 
         Public Function ImageCompareAverageImage(sFileA As String, sFileB As String, Optional ByVal iThumbSize As UInteger = 8) As Double
-            Dim sHashA As String = m_HashCache(sFileA)
-            Dim sHashB As String = m_HashCache(sFileB)
+            Dim iHashA As Byte() = m_HashCache(sFileA)
+            Dim iHashB As Byte() = m_HashCache(sFileB)
 
-            If (sHashA Is Nothing) Then
+            If (iHashA Is Nothing) Then
                 Using mImageA As Image = Image.FromFile(sFileA)
-                    sHashA = CalculateAverageHash(mImageA, iThumbSize)
-                    m_HashCache(sFileA) = sHashA
+                    iHashA = CalculateAverageHash(mImageA, iThumbSize)
+                    m_HashCache(sFileA) = iHashA
                 End Using
             End If
 
-            If (sHashB Is Nothing) Then
+            If (iHashB Is Nothing) Then
                 Using mImageB As Image = Image.FromFile(sFileB)
-                    sHashB = CalculateAverageHash(mImageB, iThumbSize)
-                    m_HashCache(sFileB) = sHashB
+                    iHashB = CalculateAverageHash(mImageB, iThumbSize)
+                    m_HashCache(sFileB) = iHashB
                 End Using
             End If
 
-            Return CalculateHashSimilarity(sHashA, sHashB)
+            Return CalculateHashSimilarity(iHashA, iHashB)
         End Function
 
-        Public Function CalculateAverageHash(sFile As String, Optional ByVal iThumbSize As UInteger = 8) As String
-            Dim sHash As String = m_HashCache(sFile)
+        Public Function CalculateAverageHash(sFile As String, Optional ByVal iThumbSize As UInteger = 8) As Byte()
+            Dim iHash As Byte() = m_HashCache(sFile)
 
-            If (sHash Is Nothing) Then
+            If (iHash Is Nothing) Then
                 Using mImage As Image = Image.FromFile(sFile)
-                    sHash = CalculateAverageHash(mImage, iThumbSize)
-                    m_HashCache(sFile) = sHash
+                    iHash = CalculateAverageHash(mImage, iThumbSize)
+                    m_HashCache(sFile) = iHash
                 End Using
             End If
 
-            Return sHash
+            Return iHash
         End Function
 
-        Public Function CalculateAverageHash(mImage As Image, Optional ByVal iThumbSize As UInteger = 8) As String
+        Public Function CalculateAverageHash(mImage As Image, Optional ByVal iThumbSize As UInteger = 8) As Byte()
             Using mThumb As New Bitmap(CInt(iThumbSize), CInt(iThumbSize))
                 Using mG As Graphics = Graphics.FromImage(mThumb)
                     SyncLock g_mLock
@@ -1011,7 +1019,8 @@ Public Class FormMain
 
                 Dim iAvgBrightness As Double = GetAverageBrightness(mThumb)
 
-                Dim sHashBits As New Text.StringBuilder(CInt(iThumbSize * iThumbSize))
+                Dim iHashBits(CInt(iThumbSize * iThumbSize) - 1) As Byte
+                Dim iHashBitCount As Integer = 0
 
                 For iX As Integer = 0 To CInt(iThumbSize - 1)
                     For iY As Integer = 0 To CInt(iThumbSize - 1)
@@ -1019,14 +1028,16 @@ Public Class FormMain
                         Dim iBB As Double = (CInt(mPB.R) + CInt(mPB.G) + CInt(mPB.B)) / 3.0
 
                         If (iBB >= iAvgBrightness) Then
-                            sHashBits.Append("1")
+                            iHashBits(iHashBitCount) = 1
+                            iHashBitCount += 1
                         Else
-                            sHashBits.Append("0")
+                            iHashBits(iHashBitCount) = 0
+                            iHashBitCount += 1
                         End If
                     Next
                 Next
 
-                Return sHashBits.ToString
+                Return iHashBits
             End Using
 
         End Function
@@ -1042,19 +1053,19 @@ Public Class FormMain
             Return iTotal / (mImage.Width * mImage.Height)
         End Function
 
-        Private Function CalculateHashSimilarity(sHashA As String, sHashB As String) As Double
-            If (sHashA.Length <> sHashB.Length) Then
+        Private Function CalculateHashSimilarity(iHashA As Byte(), iHashB As Byte()) As Double
+            If (iHashA.Length <> iHashB.Length) Then
                 Return 0.0
             End If
 
-            Dim iMatchingChars As Integer = 0
-            For i As Integer = 0 To sHashA.Length - 1
-                If (sHashA(i) = sHashB(i)) Then
-                    iMatchingChars += 1
+            Dim iMatchingBits As Integer = 0
+            For i = 0 To iHashA.Length - 1
+                If (iHashA(i) = iHashB(i)) Then
+                    iMatchingBits += 1
                 End If
             Next
 
-            Return iMatchingChars / sHashA.Length
+            Return iMatchingBits / iHashA.Length
         End Function
 
         Private Sub LoadCache()
@@ -1086,7 +1097,20 @@ Public Class FormMain
                         Continue For
                     End If
 
-                    g_mHashCache(sFile) = sImageHash
+                    Dim iHashBits(sImageHash.Length - 1) As Byte
+                    Dim iHashBitCount As Integer = 0
+
+                    For i = 0 To sImageHash.Length - 1
+                        If (sImageHash(i) = "1"c) Then
+                            iHashBits(i) = 1
+                            iHashBitCount += 1
+                        Else
+                            iHashBits(i) = 0
+                            iHashBitCount += 1
+                        End If
+                    Next
+
+                    g_mHashCache(sFile) = iHashBits
                 Next
             End SyncLock
         End Sub
@@ -1101,7 +1125,13 @@ Public Class FormMain
             SyncLock g_mLock
                 For Each mItem In g_mHashCache
                     Dim sFile As String = mItem.Key
-                    Dim sImageHash As String = mItem.Value
+                    Dim iImageHasBits As Byte() = mItem.Value
+
+
+                    Dim sImageHash As New Text.StringBuilder(iImageHasBits.Length)
+                    For i = 0 To iImageHasBits.Length - 1
+                        sImageHash.Append(CStr(iImageHasBits(i)))
+                    Next
 
                     If (Not IO.File.Exists(sFile)) Then
                         Continue For
@@ -1110,7 +1140,7 @@ Public Class FormMain
                     Dim sFileLastModified As String = CStr(New IO.FileInfo(mItem.Key).LastWriteTime.Ticks)
                     Dim sFilePath As String = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sFile))
 
-                    sCacheBuilder.AppendFormat("{0};{1};{2}", sFileLastModified, sFilePath, sImageHash).AppendLine()
+                    sCacheBuilder.AppendFormat("{0};{1};{2}", sFileLastModified, sFilePath, sImageHash.ToString).AppendLine()
                 Next
             End SyncLock
 
