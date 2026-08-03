@@ -599,9 +599,10 @@ Public Class FormMain
                                     mLastFilesPerSec.Enqueue(iFiles - iFilesLast)
                                     iFilesPerSec = mLastFilesPerSec.Average()
                                     iFilesLast = iFiles
+
                                     Dim mTimeLeft As New TimeSpan(0, 0, CInt((sFiles.Length - iFiles) / Math.Max(iFilesPerSec, 1)))
 
-                                    While (mLastFilesPerSec.Count > 10)
+                                    While (mLastFilesPerSec.Count > 30)
                                         mLastFilesPerSec.Dequeue()
                                     End While
 
