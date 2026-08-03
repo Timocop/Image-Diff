@@ -43,18 +43,6 @@ Partial Class FormMain
         Me.NumericUpDown_MaxImageDiff = New System.Windows.Forms.NumericUpDown()
         Me.TextBox_Path = New System.Windows.Forms.TextBox()
         Me.Label1 = New System.Windows.Forms.Label()
-        Me.GroupBox3 = New System.Windows.Forms.GroupBox()
-        Me.PictureBox_ImageAPreview = New System.Windows.Forms.PictureBox()
-        Me.SplitContainer1 = New System.Windows.Forms.SplitContainer()
-        Me.ListViewEx_Images = New ImageDiff.ClassListViewEx()
-        Me.ColumnHeader4 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader5 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader8 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader9 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader10 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.SplitContainer2 = New System.Windows.Forms.SplitContainer()
-        Me.GroupBox2 = New System.Windows.Forms.GroupBox()
-        Me.PictureBox_ImageBPreview = New System.Windows.Forms.PictureBox()
         Me.ContextMenuStrip_Images = New System.Windows.Forms.ContextMenuStrip(Me.components)
         Me.ToolStripMenuItem_Open = New System.Windows.Forms.ToolStripMenuItem()
         Me.FileAToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
@@ -78,13 +66,28 @@ Partial Class FormMain
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
+        Me.SplitContainer1 = New System.Windows.Forms.SplitContainer()
+        Me.SplitContainer2 = New System.Windows.Forms.SplitContainer()
+        Me.GroupBox3 = New System.Windows.Forms.GroupBox()
+        Me.PictureBox_ImageAPreview = New System.Windows.Forms.PictureBox()
+        Me.GroupBox2 = New System.Windows.Forms.GroupBox()
+        Me.PictureBox_ImageBPreview = New System.Windows.Forms.PictureBox()
+        Me.ListViewEx_Images = New ImageDiff.ClassListViewEx()
+        Me.ColumnHeader4 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader5 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader8 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader9 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ColumnHeader10 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ClassListViewEx_FailedFiles = New ImageDiff.ClassListViewEx()
         Me.ColumnHeader11 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.GroupBox1.SuspendLayout()
         CType(Me.NumericUpDown_Threads, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.NumericUpDown_MaxImageDiff, System.ComponentModel.ISupportInitialize).BeginInit()
-        Me.GroupBox3.SuspendLayout()
-        CType(Me.PictureBox_ImageAPreview, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.ContextMenuStrip_Images.SuspendLayout()
+        Me.StatusStrip1.SuspendLayout()
+        Me.TabControl1.SuspendLayout()
+        Me.TabPage1.SuspendLayout()
+        Me.TabPage2.SuspendLayout()
         CType(Me.SplitContainer1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SplitContainer1.Panel1.SuspendLayout()
         Me.SplitContainer1.Panel2.SuspendLayout()
@@ -93,13 +96,10 @@ Partial Class FormMain
         Me.SplitContainer2.Panel1.SuspendLayout()
         Me.SplitContainer2.Panel2.SuspendLayout()
         Me.SplitContainer2.SuspendLayout()
+        Me.GroupBox3.SuspendLayout()
+        CType(Me.PictureBox_ImageAPreview, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBox2.SuspendLayout()
         CType(Me.PictureBox_ImageBPreview, System.ComponentModel.ISupportInitialize).BeginInit()
-        Me.ContextMenuStrip_Images.SuspendLayout()
-        Me.StatusStrip1.SuspendLayout()
-        Me.TabControl1.SuspendLayout()
-        Me.TabPage1.SuspendLayout()
-        Me.TabPage2.SuspendLayout()
         Me.SuspendLayout()
         '
         'Button_Select
@@ -276,123 +276,6 @@ Partial Class FormMain
         Me.Label1.TabIndex = 0
         Me.Label1.Text = "Difference"
         '
-        'GroupBox3
-        '
-        Me.GroupBox3.Controls.Add(Me.PictureBox_ImageAPreview)
-        Me.GroupBox3.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.GroupBox3.Location = New System.Drawing.Point(0, 0)
-        Me.GroupBox3.Name = "GroupBox3"
-        Me.GroupBox3.Size = New System.Drawing.Size(262, 228)
-        Me.GroupBox3.TabIndex = 3
-        Me.GroupBox3.TabStop = False
-        Me.GroupBox3.Text = "Image A Preview"
-        '
-        'PictureBox_ImageAPreview
-        '
-        Me.PictureBox_ImageAPreview.Cursor = System.Windows.Forms.Cursors.Hand
-        Me.PictureBox_ImageAPreview.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.PictureBox_ImageAPreview.Location = New System.Drawing.Point(3, 18)
-        Me.PictureBox_ImageAPreview.Name = "PictureBox_ImageAPreview"
-        Me.PictureBox_ImageAPreview.Size = New System.Drawing.Size(256, 207)
-        Me.PictureBox_ImageAPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.PictureBox_ImageAPreview.TabIndex = 0
-        Me.PictureBox_ImageAPreview.TabStop = False
-        '
-        'SplitContainer1
-        '
-        Me.SplitContainer1.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.SplitContainer1.Location = New System.Drawing.Point(0, 0)
-        Me.SplitContainer1.Name = "SplitContainer1"
-        '
-        'SplitContainer1.Panel1
-        '
-        Me.SplitContainer1.Panel1.Controls.Add(Me.ListViewEx_Images)
-        '
-        'SplitContainer1.Panel2
-        '
-        Me.SplitContainer1.Panel2.Controls.Add(Me.SplitContainer2)
-        Me.SplitContainer1.Size = New System.Drawing.Size(752, 460)
-        Me.SplitContainer1.SplitterDistance = 486
-        Me.SplitContainer1.TabIndex = 4
-        '
-        'ListViewEx_Images
-        '
-        Me.ListViewEx_Images.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader4, Me.ColumnHeader5, Me.ColumnHeader8, Me.ColumnHeader9, Me.ColumnHeader10})
-        Me.ListViewEx_Images.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.ListViewEx_Images.HideSelection = False
-        Me.ListViewEx_Images.Location = New System.Drawing.Point(0, 0)
-        Me.ListViewEx_Images.m_SetSortingColumn = True
-        Me.ListViewEx_Images.Name = "ListViewEx_Images"
-        Me.ListViewEx_Images.Size = New System.Drawing.Size(486, 460)
-        Me.ListViewEx_Images.TabIndex = 0
-        Me.ListViewEx_Images.UseCompatibleStateImageBehavior = False
-        Me.ListViewEx_Images.View = System.Windows.Forms.View.Details
-        '
-        'ColumnHeader4
-        '
-        Me.ColumnHeader4.Text = "File A"
-        Me.ColumnHeader4.Width = 200
-        '
-        'ColumnHeader5
-        '
-        Me.ColumnHeader5.Text = "File B"
-        Me.ColumnHeader5.Width = 200
-        '
-        'ColumnHeader8
-        '
-        Me.ColumnHeader8.Text = "Difference"
-        Me.ColumnHeader8.Width = 75
-        '
-        'ColumnHeader9
-        '
-        Me.ColumnHeader9.Text = "Size A"
-        Me.ColumnHeader9.Width = 75
-        '
-        'ColumnHeader10
-        '
-        Me.ColumnHeader10.Text = "Size B"
-        Me.ColumnHeader10.Width = 75
-        '
-        'SplitContainer2
-        '
-        Me.SplitContainer2.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.SplitContainer2.Location = New System.Drawing.Point(0, 0)
-        Me.SplitContainer2.Name = "SplitContainer2"
-        Me.SplitContainer2.Orientation = System.Windows.Forms.Orientation.Horizontal
-        '
-        'SplitContainer2.Panel1
-        '
-        Me.SplitContainer2.Panel1.Controls.Add(Me.GroupBox3)
-        '
-        'SplitContainer2.Panel2
-        '
-        Me.SplitContainer2.Panel2.Controls.Add(Me.GroupBox2)
-        Me.SplitContainer2.Size = New System.Drawing.Size(262, 460)
-        Me.SplitContainer2.SplitterDistance = 228
-        Me.SplitContainer2.TabIndex = 4
-        '
-        'GroupBox2
-        '
-        Me.GroupBox2.Controls.Add(Me.PictureBox_ImageBPreview)
-        Me.GroupBox2.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.GroupBox2.Location = New System.Drawing.Point(0, 0)
-        Me.GroupBox2.Name = "GroupBox2"
-        Me.GroupBox2.Size = New System.Drawing.Size(262, 228)
-        Me.GroupBox2.TabIndex = 4
-        Me.GroupBox2.TabStop = False
-        Me.GroupBox2.Text = "Image B Preview"
-        '
-        'PictureBox_ImageBPreview
-        '
-        Me.PictureBox_ImageBPreview.Cursor = System.Windows.Forms.Cursors.Hand
-        Me.PictureBox_ImageBPreview.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.PictureBox_ImageBPreview.Location = New System.Drawing.Point(3, 18)
-        Me.PictureBox_ImageBPreview.Name = "PictureBox_ImageBPreview"
-        Me.PictureBox_ImageBPreview.Size = New System.Drawing.Size(256, 207)
-        Me.PictureBox_ImageBPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
-        Me.PictureBox_ImageBPreview.TabIndex = 0
-        Me.PictureBox_ImageBPreview.TabStop = False
-        '
         'ContextMenuStrip_Images
         '
         Me.ContextMenuStrip_Images.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem_Open, Me.ToolStripMenuItem_OpenExplorer, Me.ToolStripSeparator1, Me.ToolStripMenuItem_Remove})
@@ -542,6 +425,124 @@ Partial Class FormMain
         Me.TabPage2.Text = "Unsupported images"
         Me.TabPage2.UseVisualStyleBackColor = True
         '
+        'SplitContainer1
+        '
+        Me.SplitContainer1.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.SplitContainer1.Location = New System.Drawing.Point(0, 0)
+        Me.SplitContainer1.Name = "SplitContainer1"
+        '
+        'SplitContainer1.Panel1
+        '
+        Me.SplitContainer1.Panel1.Controls.Add(Me.ListViewEx_Images)
+        '
+        'SplitContainer1.Panel2
+        '
+        Me.SplitContainer1.Panel2.Controls.Add(Me.SplitContainer2)
+        Me.SplitContainer1.Size = New System.Drawing.Size(752, 460)
+        Me.SplitContainer1.SplitterDistance = 486
+        Me.SplitContainer1.TabIndex = 4
+        '
+        'SplitContainer2
+        '
+        Me.SplitContainer2.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.SplitContainer2.Location = New System.Drawing.Point(0, 0)
+        Me.SplitContainer2.Name = "SplitContainer2"
+        Me.SplitContainer2.Orientation = System.Windows.Forms.Orientation.Horizontal
+        '
+        'SplitContainer2.Panel1
+        '
+        Me.SplitContainer2.Panel1.Controls.Add(Me.GroupBox3)
+        '
+        'SplitContainer2.Panel2
+        '
+        Me.SplitContainer2.Panel2.Controls.Add(Me.GroupBox2)
+        Me.SplitContainer2.Size = New System.Drawing.Size(262, 460)
+        Me.SplitContainer2.SplitterDistance = 228
+        Me.SplitContainer2.TabIndex = 4
+        '
+        'GroupBox3
+        '
+        Me.GroupBox3.Controls.Add(Me.PictureBox_ImageAPreview)
+        Me.GroupBox3.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.GroupBox3.Location = New System.Drawing.Point(0, 0)
+        Me.GroupBox3.Name = "GroupBox3"
+        Me.GroupBox3.Size = New System.Drawing.Size(262, 228)
+        Me.GroupBox3.TabIndex = 3
+        Me.GroupBox3.TabStop = False
+        Me.GroupBox3.Text = "Image A Preview"
+        '
+        'PictureBox_ImageAPreview
+        '
+        Me.PictureBox_ImageAPreview.Cursor = System.Windows.Forms.Cursors.Hand
+        Me.PictureBox_ImageAPreview.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.PictureBox_ImageAPreview.Location = New System.Drawing.Point(3, 18)
+        Me.PictureBox_ImageAPreview.Name = "PictureBox_ImageAPreview"
+        Me.PictureBox_ImageAPreview.Size = New System.Drawing.Size(256, 207)
+        Me.PictureBox_ImageAPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox_ImageAPreview.TabIndex = 0
+        Me.PictureBox_ImageAPreview.TabStop = False
+        '
+        'GroupBox2
+        '
+        Me.GroupBox2.Controls.Add(Me.PictureBox_ImageBPreview)
+        Me.GroupBox2.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.GroupBox2.Location = New System.Drawing.Point(0, 0)
+        Me.GroupBox2.Name = "GroupBox2"
+        Me.GroupBox2.Size = New System.Drawing.Size(262, 228)
+        Me.GroupBox2.TabIndex = 4
+        Me.GroupBox2.TabStop = False
+        Me.GroupBox2.Text = "Image B Preview"
+        '
+        'PictureBox_ImageBPreview
+        '
+        Me.PictureBox_ImageBPreview.Cursor = System.Windows.Forms.Cursors.Hand
+        Me.PictureBox_ImageBPreview.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.PictureBox_ImageBPreview.Location = New System.Drawing.Point(3, 18)
+        Me.PictureBox_ImageBPreview.Name = "PictureBox_ImageBPreview"
+        Me.PictureBox_ImageBPreview.Size = New System.Drawing.Size(256, 207)
+        Me.PictureBox_ImageBPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom
+        Me.PictureBox_ImageBPreview.TabIndex = 0
+        Me.PictureBox_ImageBPreview.TabStop = False
+        '
+        'ListViewEx_Images
+        '
+        Me.ListViewEx_Images.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader4, Me.ColumnHeader5, Me.ColumnHeader8, Me.ColumnHeader9, Me.ColumnHeader10})
+        Me.ListViewEx_Images.ContextMenuStrip = Me.ContextMenuStrip_Images
+        Me.ListViewEx_Images.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ListViewEx_Images.HideSelection = False
+        Me.ListViewEx_Images.Location = New System.Drawing.Point(0, 0)
+        Me.ListViewEx_Images.m_SetSortingColumn = True
+        Me.ListViewEx_Images.Name = "ListViewEx_Images"
+        Me.ListViewEx_Images.Size = New System.Drawing.Size(486, 460)
+        Me.ListViewEx_Images.TabIndex = 0
+        Me.ListViewEx_Images.UseCompatibleStateImageBehavior = False
+        Me.ListViewEx_Images.View = System.Windows.Forms.View.Details
+        '
+        'ColumnHeader4
+        '
+        Me.ColumnHeader4.Text = "File A"
+        Me.ColumnHeader4.Width = 200
+        '
+        'ColumnHeader5
+        '
+        Me.ColumnHeader5.Text = "File B"
+        Me.ColumnHeader5.Width = 200
+        '
+        'ColumnHeader8
+        '
+        Me.ColumnHeader8.Text = "Difference"
+        Me.ColumnHeader8.Width = 75
+        '
+        'ColumnHeader9
+        '
+        Me.ColumnHeader9.Text = "Size A"
+        Me.ColumnHeader9.Width = 75
+        '
+        'ColumnHeader10
+        '
+        Me.ColumnHeader10.Text = "Size B"
+        Me.ColumnHeader10.Width = 75
+        '
         'ClassListViewEx_FailedFiles
         '
         Me.ClassListViewEx_FailedFiles.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader11})
@@ -578,8 +579,12 @@ Partial Class FormMain
         Me.GroupBox1.PerformLayout()
         CType(Me.NumericUpDown_Threads, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.NumericUpDown_MaxImageDiff, System.ComponentModel.ISupportInitialize).EndInit()
-        Me.GroupBox3.ResumeLayout(False)
-        CType(Me.PictureBox_ImageAPreview, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.ContextMenuStrip_Images.ResumeLayout(False)
+        Me.StatusStrip1.ResumeLayout(False)
+        Me.StatusStrip1.PerformLayout()
+        Me.TabControl1.ResumeLayout(False)
+        Me.TabPage1.ResumeLayout(False)
+        Me.TabPage2.ResumeLayout(False)
         Me.SplitContainer1.Panel1.ResumeLayout(False)
         Me.SplitContainer1.Panel2.ResumeLayout(False)
         CType(Me.SplitContainer1, System.ComponentModel.ISupportInitialize).EndInit()
@@ -588,14 +593,10 @@ Partial Class FormMain
         Me.SplitContainer2.Panel2.ResumeLayout(False)
         CType(Me.SplitContainer2, System.ComponentModel.ISupportInitialize).EndInit()
         Me.SplitContainer2.ResumeLayout(False)
+        Me.GroupBox3.ResumeLayout(False)
+        CType(Me.PictureBox_ImageAPreview, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBox2.ResumeLayout(False)
         CType(Me.PictureBox_ImageBPreview, System.ComponentModel.ISupportInitialize).EndInit()
-        Me.ContextMenuStrip_Images.ResumeLayout(False)
-        Me.StatusStrip1.ResumeLayout(False)
-        Me.StatusStrip1.PerformLayout()
-        Me.TabControl1.ResumeLayout(False)
-        Me.TabPage1.ResumeLayout(False)
-        Me.TabPage2.ResumeLayout(False)
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
