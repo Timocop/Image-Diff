@@ -60,13 +60,13 @@ Partial Class FormMain
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.SplitContainer1 = New System.Windows.Forms.SplitContainer()
+        Me.ClassTreeViewColumns_Images = New ImageDiff.ClassTreeViewColumns()
         Me.SplitContainer2 = New System.Windows.Forms.SplitContainer()
         Me.GroupBox3 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageAPreview = New System.Windows.Forms.PictureBox()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageBPreview = New System.Windows.Forms.PictureBox()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
-        Me.ClassTreeViewColumns_Images = New ImageDiff.ClassTreeViewColumns()
         Me.ClassListViewEx_FailedFiles = New ImageDiff.ClassListViewEx()
         Me.ColumnHeader11 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.GroupBox1.SuspendLayout()
@@ -125,7 +125,7 @@ Partial Class FormMain
         Me.GroupBox1.Size = New System.Drawing.Size(760, 132)
         Me.GroupBox1.TabIndex = 1
         Me.GroupBox1.TabStop = False
-        Me.GroupBox1.Text = "Image directory"
+        Me.GroupBox1.Text = "Image directory and settings"
         '
         'CheckBox_Caching
         '
@@ -269,31 +269,31 @@ Partial Class FormMain
         '
         Me.ContextMenuStrip_Images.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem_Open, Me.ToolStripMenuItem_OpenExplorer, Me.ToolStripSeparator1, Me.ToolStripMenuItem_Remove})
         Me.ContextMenuStrip_Images.Name = "ContextMenuStrip_Images"
-        Me.ContextMenuStrip_Images.Size = New System.Drawing.Size(181, 98)
+        Me.ContextMenuStrip_Images.Size = New System.Drawing.Size(163, 76)
         '
         'ToolStripMenuItem_Open
         '
         Me.ToolStripMenuItem_Open.Image = CType(resources.GetObject("ToolStripMenuItem_Open.Image"), System.Drawing.Image)
         Me.ToolStripMenuItem_Open.Name = "ToolStripMenuItem_Open"
-        Me.ToolStripMenuItem_Open.Size = New System.Drawing.Size(180, 22)
+        Me.ToolStripMenuItem_Open.Size = New System.Drawing.Size(162, 22)
         Me.ToolStripMenuItem_Open.Text = "Open"
         '
         'ToolStripMenuItem_OpenExplorer
         '
         Me.ToolStripMenuItem_OpenExplorer.Name = "ToolStripMenuItem_OpenExplorer"
-        Me.ToolStripMenuItem_OpenExplorer.Size = New System.Drawing.Size(180, 22)
+        Me.ToolStripMenuItem_OpenExplorer.Size = New System.Drawing.Size(162, 22)
         Me.ToolStripMenuItem_OpenExplorer.Text = "Open in explorer"
         '
         'ToolStripSeparator1
         '
         Me.ToolStripSeparator1.Name = "ToolStripSeparator1"
-        Me.ToolStripSeparator1.Size = New System.Drawing.Size(177, 6)
+        Me.ToolStripSeparator1.Size = New System.Drawing.Size(159, 6)
         '
         'ToolStripMenuItem_Remove
         '
         Me.ToolStripMenuItem_Remove.Image = CType(resources.GetObject("ToolStripMenuItem_Remove.Image"), System.Drawing.Image)
         Me.ToolStripMenuItem_Remove.Name = "ToolStripMenuItem_Remove"
-        Me.ToolStripMenuItem_Remove.Size = New System.Drawing.Size(180, 22)
+        Me.ToolStripMenuItem_Remove.Size = New System.Drawing.Size(162, 22)
         Me.ToolStripMenuItem_Remove.Text = "Remove"
         '
         'StatusStrip1
@@ -382,6 +382,17 @@ Partial Class FormMain
         Me.SplitContainer1.SplitterDistance = 486
         Me.SplitContainer1.TabIndex = 4
         '
+        'ClassTreeViewColumns_Images
+        '
+        Me.ClassTreeViewColumns_Images.AutoScroll = True
+        Me.ClassTreeViewColumns_Images.BackColor = System.Drawing.SystemColors.Window
+        Me.ClassTreeViewColumns_Images.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ClassTreeViewColumns_Images.Location = New System.Drawing.Point(0, 0)
+        Me.ClassTreeViewColumns_Images.m_GridView = True
+        Me.ClassTreeViewColumns_Images.Name = "ClassTreeViewColumns_Images"
+        Me.ClassTreeViewColumns_Images.Size = New System.Drawing.Size(486, 460)
+        Me.ClassTreeViewColumns_Images.TabIndex = 0
+        '
         'SplitContainer2
         '
         Me.SplitContainer2.Dock = System.Windows.Forms.DockStyle.Fill
@@ -453,17 +464,6 @@ Partial Class FormMain
         Me.TabPage2.TabIndex = 1
         Me.TabPage2.Text = "Unsupported images"
         Me.TabPage2.UseVisualStyleBackColor = True
-        '
-        'ClassTreeViewColumns_Images
-        '
-        Me.ClassTreeViewColumns_Images.AutoScroll = True
-        Me.ClassTreeViewColumns_Images.BackColor = System.Drawing.SystemColors.Window
-        Me.ClassTreeViewColumns_Images.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.ClassTreeViewColumns_Images.Location = New System.Drawing.Point(0, 0)
-        Me.ClassTreeViewColumns_Images.m_GridView = True
-        Me.ClassTreeViewColumns_Images.Name = "ClassTreeViewColumns_Images"
-        Me.ClassTreeViewColumns_Images.Size = New System.Drawing.Size(486, 460)
-        Me.ClassTreeViewColumns_Images.TabIndex = 0
         '
         'ClassListViewEx_FailedFiles
         '
