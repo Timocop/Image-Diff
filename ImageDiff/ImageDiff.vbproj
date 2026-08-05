@@ -112,6 +112,15 @@
     <Compile Include="ClassListViewEx.vb">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="ClassTreeViewBuffered.vb">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ClassTreeViewColumns.designer.vb">
+      <DependentUpon>ClassTreeViewColumns.vb</DependentUpon>
+    </Compile>
+    <Compile Include="ClassTreeViewColumns.vb">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="FormMain.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -138,6 +147,9 @@
   <ItemGroup>
     <EmbeddedResource Include="ClassListViewEx.resx">
       <DependentUpon>ClassListViewEx.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ClassTreeViewColumns.resx">
+      <DependentUpon>ClassTreeViewColumns.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="FormMain.resx">
       <DependentUpon>FormMain.vb</DependentUpon>

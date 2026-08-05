@@ -45,15 +45,9 @@ Partial Class FormMain
         Me.Label1 = New System.Windows.Forms.Label()
         Me.ContextMenuStrip_Images = New System.Windows.Forms.ContextMenuStrip(Me.components)
         Me.ToolStripMenuItem_Open = New System.Windows.Forms.ToolStripMenuItem()
-        Me.FileAToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
-        Me.FileBToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem_OpenExplorer = New System.Windows.Forms.ToolStripMenuItem()
-        Me.FileAToolStripMenuItem2 = New System.Windows.Forms.ToolStripMenuItem()
-        Me.FileBToolStripMenuItem2 = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripSeparator1 = New System.Windows.Forms.ToolStripSeparator()
         Me.ToolStripMenuItem_Remove = New System.Windows.Forms.ToolStripMenuItem()
-        Me.FileAToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
-        Me.FileBToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.StatusStrip1 = New System.Windows.Forms.StatusStrip()
         Me.ToolStripProgressBar_Progress = New System.Windows.Forms.ToolStripProgressBar()
         Me.ToolStripStatusLabel_Progress = New System.Windows.Forms.ToolStripStatusLabel()
@@ -65,19 +59,14 @@ Partial Class FormMain
         Me.ToolTip1 = New System.Windows.Forms.ToolTip(Me.components)
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
-        Me.TabPage2 = New System.Windows.Forms.TabPage()
         Me.SplitContainer1 = New System.Windows.Forms.SplitContainer()
         Me.SplitContainer2 = New System.Windows.Forms.SplitContainer()
         Me.GroupBox3 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageAPreview = New System.Windows.Forms.PictureBox()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageBPreview = New System.Windows.Forms.PictureBox()
-        Me.ListViewEx_Images = New ImageDiff.ClassListViewEx()
-        Me.ColumnHeader4 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader5 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader8 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader9 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ColumnHeader10 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.TabPage2 = New System.Windows.Forms.TabPage()
+        Me.ClassTreeViewColumns_Images = New ImageDiff.ClassTreeViewColumns()
         Me.ClassListViewEx_FailedFiles = New ImageDiff.ClassListViewEx()
         Me.ColumnHeader11 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.GroupBox1.SuspendLayout()
@@ -87,7 +76,6 @@ Partial Class FormMain
         Me.StatusStrip1.SuspendLayout()
         Me.TabControl1.SuspendLayout()
         Me.TabPage1.SuspendLayout()
-        Me.TabPage2.SuspendLayout()
         CType(Me.SplitContainer1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SplitContainer1.Panel1.SuspendLayout()
         Me.SplitContainer1.Panel2.SuspendLayout()
@@ -100,6 +88,7 @@ Partial Class FormMain
         CType(Me.PictureBox_ImageAPreview, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.GroupBox2.SuspendLayout()
         CType(Me.PictureBox_ImageBPreview, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.TabPage2.SuspendLayout()
         Me.SuspendLayout()
         '
         'Button_Select
@@ -190,8 +179,7 @@ Partial Class FormMain
         Me.ComboBox_HashingMethod.Size = New System.Drawing.Size(128, 21)
         Me.ComboBox_HashingMethod.TabIndex = 7
         Me.ToolTip1.SetToolTip(Me.ComboBox_HashingMethod, "GDI uses default .NET Framework image processing with limited format support." & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & "Ma" &
-        "gick uses third-party image processing that enables more image formats but is al" &
-        "so slower than GDI.")
+        "gick enables more image formats but is also slower than GDI.")
         '
         'Label3
         '
@@ -210,8 +198,9 @@ Partial Class FormMain
         Me.ComboBox_HashingSize.Name = "ComboBox_HashingSize"
         Me.ComboBox_HashingSize.Size = New System.Drawing.Size(128, 21)
         Me.ComboBox_HashingSize.TabIndex = 5
-        Me.ToolTip1.SetToolTip(Me.ComboBox_HashingSize, "Image comparing size in pixels." & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & "Smaller sizes speed up processing but does not d" &
-        "etect smaller details in the image.")
+        Me.ToolTip1.SetToolTip(Me.ComboBox_HashingSize, "Image comparing size in pixels." & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & "Smaller image sizes speed up processing but does" &
+        " not detect smaller details in the image and could also result in false positive" &
+        "s.")
         '
         'CheckBox_CheckSubDirectorys
         '
@@ -280,71 +269,32 @@ Partial Class FormMain
         '
         Me.ContextMenuStrip_Images.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem_Open, Me.ToolStripMenuItem_OpenExplorer, Me.ToolStripSeparator1, Me.ToolStripMenuItem_Remove})
         Me.ContextMenuStrip_Images.Name = "ContextMenuStrip_Images"
-        Me.ContextMenuStrip_Images.Size = New System.Drawing.Size(163, 76)
+        Me.ContextMenuStrip_Images.Size = New System.Drawing.Size(181, 98)
         '
         'ToolStripMenuItem_Open
         '
-        Me.ToolStripMenuItem_Open.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.FileAToolStripMenuItem1, Me.FileBToolStripMenuItem1})
         Me.ToolStripMenuItem_Open.Image = CType(resources.GetObject("ToolStripMenuItem_Open.Image"), System.Drawing.Image)
         Me.ToolStripMenuItem_Open.Name = "ToolStripMenuItem_Open"
-        Me.ToolStripMenuItem_Open.Size = New System.Drawing.Size(162, 22)
+        Me.ToolStripMenuItem_Open.Size = New System.Drawing.Size(180, 22)
         Me.ToolStripMenuItem_Open.Text = "Open"
-        '
-        'FileAToolStripMenuItem1
-        '
-        Me.FileAToolStripMenuItem1.Name = "FileAToolStripMenuItem1"
-        Me.FileAToolStripMenuItem1.Size = New System.Drawing.Size(103, 22)
-        Me.FileAToolStripMenuItem1.Text = "File A"
-        '
-        'FileBToolStripMenuItem1
-        '
-        Me.FileBToolStripMenuItem1.Name = "FileBToolStripMenuItem1"
-        Me.FileBToolStripMenuItem1.Size = New System.Drawing.Size(103, 22)
-        Me.FileBToolStripMenuItem1.Text = "File B"
         '
         'ToolStripMenuItem_OpenExplorer
         '
-        Me.ToolStripMenuItem_OpenExplorer.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.FileAToolStripMenuItem2, Me.FileBToolStripMenuItem2})
         Me.ToolStripMenuItem_OpenExplorer.Name = "ToolStripMenuItem_OpenExplorer"
-        Me.ToolStripMenuItem_OpenExplorer.Size = New System.Drawing.Size(162, 22)
+        Me.ToolStripMenuItem_OpenExplorer.Size = New System.Drawing.Size(180, 22)
         Me.ToolStripMenuItem_OpenExplorer.Text = "Open in explorer"
-        '
-        'FileAToolStripMenuItem2
-        '
-        Me.FileAToolStripMenuItem2.Name = "FileAToolStripMenuItem2"
-        Me.FileAToolStripMenuItem2.Size = New System.Drawing.Size(103, 22)
-        Me.FileAToolStripMenuItem2.Text = "File A"
-        '
-        'FileBToolStripMenuItem2
-        '
-        Me.FileBToolStripMenuItem2.Name = "FileBToolStripMenuItem2"
-        Me.FileBToolStripMenuItem2.Size = New System.Drawing.Size(103, 22)
-        Me.FileBToolStripMenuItem2.Text = "File B"
         '
         'ToolStripSeparator1
         '
         Me.ToolStripSeparator1.Name = "ToolStripSeparator1"
-        Me.ToolStripSeparator1.Size = New System.Drawing.Size(159, 6)
+        Me.ToolStripSeparator1.Size = New System.Drawing.Size(177, 6)
         '
         'ToolStripMenuItem_Remove
         '
-        Me.ToolStripMenuItem_Remove.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.FileAToolStripMenuItem, Me.FileBToolStripMenuItem})
         Me.ToolStripMenuItem_Remove.Image = CType(resources.GetObject("ToolStripMenuItem_Remove.Image"), System.Drawing.Image)
         Me.ToolStripMenuItem_Remove.Name = "ToolStripMenuItem_Remove"
-        Me.ToolStripMenuItem_Remove.Size = New System.Drawing.Size(162, 22)
+        Me.ToolStripMenuItem_Remove.Size = New System.Drawing.Size(180, 22)
         Me.ToolStripMenuItem_Remove.Text = "Remove"
-        '
-        'FileAToolStripMenuItem
-        '
-        Me.FileAToolStripMenuItem.Name = "FileAToolStripMenuItem"
-        Me.FileAToolStripMenuItem.Size = New System.Drawing.Size(103, 22)
-        Me.FileAToolStripMenuItem.Text = "File A"
-        '
-        'FileBToolStripMenuItem
-        '
-        Me.FileBToolStripMenuItem.Name = "FileBToolStripMenuItem"
-        Me.FileBToolStripMenuItem.Size = New System.Drawing.Size(103, 22)
-        Me.FileBToolStripMenuItem.Text = "File B"
         '
         'StatusStrip1
         '
@@ -415,16 +365,6 @@ Partial Class FormMain
         Me.TabPage1.Text = "Image compare"
         Me.TabPage1.UseVisualStyleBackColor = True
         '
-        'TabPage2
-        '
-        Me.TabPage2.Controls.Add(Me.ClassListViewEx_FailedFiles)
-        Me.TabPage2.Location = New System.Drawing.Point(4, 22)
-        Me.TabPage2.Name = "TabPage2"
-        Me.TabPage2.Size = New System.Drawing.Size(752, 460)
-        Me.TabPage2.TabIndex = 1
-        Me.TabPage2.Text = "Unsupported images"
-        Me.TabPage2.UseVisualStyleBackColor = True
-        '
         'SplitContainer1
         '
         Me.SplitContainer1.Dock = System.Windows.Forms.DockStyle.Fill
@@ -433,7 +373,7 @@ Partial Class FormMain
         '
         'SplitContainer1.Panel1
         '
-        Me.SplitContainer1.Panel1.Controls.Add(Me.ListViewEx_Images)
+        Me.SplitContainer1.Panel1.Controls.Add(Me.ClassTreeViewColumns_Images)
         '
         'SplitContainer1.Panel2
         '
@@ -504,44 +444,26 @@ Partial Class FormMain
         Me.PictureBox_ImageBPreview.TabIndex = 0
         Me.PictureBox_ImageBPreview.TabStop = False
         '
-        'ListViewEx_Images
+        'TabPage2
         '
-        Me.ListViewEx_Images.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader4, Me.ColumnHeader5, Me.ColumnHeader8, Me.ColumnHeader9, Me.ColumnHeader10})
-        Me.ListViewEx_Images.ContextMenuStrip = Me.ContextMenuStrip_Images
-        Me.ListViewEx_Images.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.ListViewEx_Images.HideSelection = False
-        Me.ListViewEx_Images.Location = New System.Drawing.Point(0, 0)
-        Me.ListViewEx_Images.m_SetSortingColumn = True
-        Me.ListViewEx_Images.Name = "ListViewEx_Images"
-        Me.ListViewEx_Images.Size = New System.Drawing.Size(486, 460)
-        Me.ListViewEx_Images.TabIndex = 0
-        Me.ListViewEx_Images.UseCompatibleStateImageBehavior = False
-        Me.ListViewEx_Images.View = System.Windows.Forms.View.Details
+        Me.TabPage2.Controls.Add(Me.ClassListViewEx_FailedFiles)
+        Me.TabPage2.Location = New System.Drawing.Point(4, 22)
+        Me.TabPage2.Name = "TabPage2"
+        Me.TabPage2.Size = New System.Drawing.Size(752, 460)
+        Me.TabPage2.TabIndex = 1
+        Me.TabPage2.Text = "Unsupported images"
+        Me.TabPage2.UseVisualStyleBackColor = True
         '
-        'ColumnHeader4
+        'ClassTreeViewColumns_Images
         '
-        Me.ColumnHeader4.Text = "File A"
-        Me.ColumnHeader4.Width = 200
-        '
-        'ColumnHeader5
-        '
-        Me.ColumnHeader5.Text = "File B"
-        Me.ColumnHeader5.Width = 200
-        '
-        'ColumnHeader8
-        '
-        Me.ColumnHeader8.Text = "Difference"
-        Me.ColumnHeader8.Width = 75
-        '
-        'ColumnHeader9
-        '
-        Me.ColumnHeader9.Text = "Size A"
-        Me.ColumnHeader9.Width = 75
-        '
-        'ColumnHeader10
-        '
-        Me.ColumnHeader10.Text = "Size B"
-        Me.ColumnHeader10.Width = 75
+        Me.ClassTreeViewColumns_Images.AutoScroll = True
+        Me.ClassTreeViewColumns_Images.BackColor = System.Drawing.SystemColors.Window
+        Me.ClassTreeViewColumns_Images.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ClassTreeViewColumns_Images.Location = New System.Drawing.Point(0, 0)
+        Me.ClassTreeViewColumns_Images.m_GridView = True
+        Me.ClassTreeViewColumns_Images.Name = "ClassTreeViewColumns_Images"
+        Me.ClassTreeViewColumns_Images.Size = New System.Drawing.Size(486, 460)
+        Me.ClassTreeViewColumns_Images.TabIndex = 0
         '
         'ClassListViewEx_FailedFiles
         '
@@ -584,7 +506,6 @@ Partial Class FormMain
         Me.StatusStrip1.PerformLayout()
         Me.TabControl1.ResumeLayout(False)
         Me.TabPage1.ResumeLayout(False)
-        Me.TabPage2.ResumeLayout(False)
         Me.SplitContainer1.Panel1.ResumeLayout(False)
         Me.SplitContainer1.Panel2.ResumeLayout(False)
         CType(Me.SplitContainer1, System.ComponentModel.ISupportInitialize).EndInit()
@@ -597,6 +518,7 @@ Partial Class FormMain
         CType(Me.PictureBox_ImageAPreview, System.ComponentModel.ISupportInitialize).EndInit()
         Me.GroupBox2.ResumeLayout(False)
         CType(Me.PictureBox_ImageBPreview, System.ComponentModel.ISupportInitialize).EndInit()
+        Me.TabPage2.ResumeLayout(False)
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
@@ -629,24 +551,12 @@ Partial Class FormMain
     Friend WithEvents PictureBox_ImageBPreview As PictureBox
     Friend WithEvents ColumnHeader1 As ColumnHeader
     Friend WithEvents ColumnHeader3 As ColumnHeader
-    Friend WithEvents FileAToolStripMenuItem1 As ToolStripMenuItem
-    Friend WithEvents FileBToolStripMenuItem1 As ToolStripMenuItem
-    Friend WithEvents FileAToolStripMenuItem2 As ToolStripMenuItem
-    Friend WithEvents FileBToolStripMenuItem2 As ToolStripMenuItem
-    Friend WithEvents FileAToolStripMenuItem As ToolStripMenuItem
-    Friend WithEvents FileBToolStripMenuItem As ToolStripMenuItem
     Friend WithEvents Label4 As Label
     Friend WithEvents ComboBox_HashingMethod As ComboBox
     Friend WithEvents Label3 As Label
     Friend WithEvents ComboBox_HashingSize As ComboBox
     Friend WithEvents ComboBox_HashingQuality As ComboBox
     Friend WithEvents Label5 As Label
-    Friend WithEvents ListViewEx_Images As ClassListViewEx
-    Friend WithEvents ColumnHeader4 As ColumnHeader
-    Friend WithEvents ColumnHeader5 As ColumnHeader
-    Friend WithEvents ColumnHeader8 As ColumnHeader
-    Friend WithEvents ColumnHeader9 As ColumnHeader
-    Friend WithEvents ColumnHeader10 As ColumnHeader
     Friend WithEvents CheckBox_Caching As CheckBox
     Friend WithEvents ToolTip1 As ToolTip
     Friend WithEvents TabControl1 As TabControl
@@ -654,4 +564,5 @@ Partial Class FormMain
     Friend WithEvents TabPage2 As TabPage
     Friend WithEvents ClassListViewEx_FailedFiles As ClassListViewEx
     Friend WithEvents ColumnHeader11 As ColumnHeader
+    Friend WithEvents ClassTreeViewColumns_Images As ClassTreeViewColumns
 End Class

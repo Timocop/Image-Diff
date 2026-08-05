@@ -52,6 +52,15 @@ Public Class FormMain
         InitializeComponent()
 
         ' Add any initialization after the InitializeComponent() call.
+        ClassTreeViewColumns_Images.m_Columns.Add("", 50)
+        ClassTreeViewColumns_Images.m_Columns.Add("File", 250)
+        ClassTreeViewColumns_Images.m_Columns.Add("Difference", 75)
+        ClassTreeViewColumns_Images.m_Columns.Add("Size", 75)
+
+        ClassTreeViewColumns_Images.m_TreeView.ContextMenuStrip = ContextMenuStrip_Images
+
+        AddHandler ClassTreeViewColumns_Images.m_TreeView.AfterSelect, AddressOf TreeView_AfterNode
+
         NumericUpDown_Threads.Minimum = 1
         NumericUpDown_Threads.Maximum = 64
         NumericUpDown_Threads.Value = Math.Max(Math.Min(Environment.ProcessorCount, NumericUpDown_Threads.Maximum), NumericUpDown_Threads.Minimum)
@@ -80,10 +89,12 @@ Public Class FormMain
         ImageMagick.OpenCL.IsEnabled = False
     End Sub
 
-    Public Sub SetPreviewImageA(mImage As Object)
+    Public Sub SetPreviewImageA(mImage As Object, sFile As String)
         If (PictureBox_ImageAPreview.Image IsNot Nothing) Then
             PictureBox_ImageAPreview.Image.Dispose()
+
             PictureBox_ImageAPreview.Image = Nothing
+            PictureBox_ImageAPreview.Tag = Nothing
         End If
 
         If (mImage Is Nothing) Then
@@ -94,7 +105,13 @@ Public Class FormMain
             Case (TypeOf mImage Is Image)
                 Dim mNewImage = DirectCast(mImage, Image)
 
-                PictureBox_ImageAPreview.Image = mNewImage
+                Using mStream As New IO.MemoryStream()
+                    mNewImage.Save(mStream, Imaging.ImageFormat.Jpeg)
+                    mStream.Position = 0
+
+                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageAPreview.Tag = sFile
+                End Using
 
             Case (TypeOf mImage Is ImageMagick.MagickImage)
                 Dim mNewImage = DirectCast(mImage, ImageMagick.MagickImage)
@@ -102,15 +119,19 @@ Public Class FormMain
                 Using mStream As New IO.MemoryStream()
                     mNewImage.Write(mStream, ImageMagick.MagickFormat.Jpg)
                     mStream.Position = 0
+
                     PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageAPreview.Tag = sFile
                 End Using
         End Select
     End Sub
 
-    Public Sub SetPreviewImageB(mImage As Object)
+    Public Sub SetPreviewImageB(mImage As Object, sFile As String)
         If (PictureBox_ImageBPreview.Image IsNot Nothing) Then
             PictureBox_ImageBPreview.Image.Dispose()
+
             PictureBox_ImageBPreview.Image = Nothing
+            PictureBox_ImageBPreview.Tag = Nothing
         End If
 
         If (mImage Is Nothing) Then
@@ -121,7 +142,13 @@ Public Class FormMain
             Case (TypeOf mImage Is Image)
                 Dim mNewImage = DirectCast(mImage, Image)
 
-                PictureBox_ImageBPreview.Image = mNewImage
+                Using mStream As New IO.MemoryStream()
+                    mNewImage.Save(mStream, Imaging.ImageFormat.Jpeg)
+                    mStream.Position = 0
+
+                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageBPreview.Tag = sFile
+                End Using
 
             Case (TypeOf mImage Is ImageMagick.MagickImage)
                 Dim mNewImage = DirectCast(mImage, ImageMagick.MagickImage)
@@ -129,7 +156,9 @@ Public Class FormMain
                 Using mStream As New IO.MemoryStream()
                     mNewImage.Write(mStream, ImageMagick.MagickFormat.Jpg)
                     mStream.Position = 0
+
                     PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageBPreview.Tag = sFile
                 End Using
         End Select
     End Sub
@@ -172,233 +201,18 @@ Public Class FormMain
         End Try
     End Sub
 
-    Private Sub ListViewEx_Images_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ListViewEx_Images.SelectedIndexChanged
-        Try
-            If (g_bIgnoreSelection) Then
-                Return
-            End If
-
-            If (ListViewEx_Images.SelectedItems.Count <> 1) Then
-                Return
-            End If
-
-            If (TypeOf ListViewEx_Images.SelectedItems(0) IsNot ClassListViewItemImage) Then
-                Return
-            End If
-
-            Dim mSelectedItem = DirectCast(ListViewEx_Images.SelectedItems(0), ClassListViewItemImage)
-
-            If (IO.File.Exists(mSelectedItem.m_ImageInfo.sFileA)) Then
-                Try
-                    SetPreviewImageA(New Bitmap(mSelectedItem.m_ImageInfo.sFileA))
-                Catch ex As Exception
-                    ' Unsupported image, try Magick
-                    SetPreviewImageA(New ImageMagick.MagickImage(mSelectedItem.m_ImageInfo.sFileA))
-                End Try
-            End If
-
-            If (IO.File.Exists(mSelectedItem.m_ImageInfo.sFileB)) Then
-                Try
-                    SetPreviewImageB(New Bitmap(mSelectedItem.m_ImageInfo.sFileB))
-                Catch ex As Exception
-                    ' Unsupported image, try Magick
-                    SetPreviewImageB(New ImageMagick.MagickImage(mSelectedItem.m_ImageInfo.sFileB))
-                End Try
-            End If
-
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-    Private Sub FileAToolStripMenuItem1_Click(sender As Object, e As EventArgs) Handles FileAToolStripMenuItem1.Click
-        Try
-            If (ListViewEx_Images.SelectedItems.Count <> 1) Then
-                Return
-            End If
-
-            If (TypeOf ListViewEx_Images.SelectedItems(0) IsNot ClassListViewItemImage) Then
-                Return
-            End If
-
-            Dim mSelectedItem = DirectCast(ListViewEx_Images.SelectedItems(0), ClassListViewItemImage)
-            If (Not IO.File.Exists(mSelectedItem.m_ImageInfo.sFileA)) Then
-                Return
-            End If
-
-            Process.Start(mSelectedItem.m_ImageInfo.sFileA)
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-    Private Sub FileBToolStripMenuItem1_Click(sender As Object, e As EventArgs) Handles FileBToolStripMenuItem1.Click
-        Try
-            If (ListViewEx_Images.SelectedItems.Count <> 1) Then
-                Return
-            End If
-
-            If (TypeOf ListViewEx_Images.SelectedItems(0) IsNot ClassListViewItemImage) Then
-                Return
-            End If
-
-            Dim mSelectedItem = DirectCast(ListViewEx_Images.SelectedItems(0), ClassListViewItemImage)
-            If (Not IO.File.Exists(mSelectedItem.m_ImageInfo.sFileB)) Then
-                Return
-            End If
-
-            Process.Start(mSelectedItem.m_ImageInfo.sFileB)
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-    Private Sub FileAToolStripMenuItem2_Click(sender As Object, e As EventArgs) Handles FileAToolStripMenuItem2.Click
-        Try
-            If (ListViewEx_Images.SelectedItems.Count <> 1) Then
-                Return
-            End If
-
-            If (TypeOf ListViewEx_Images.SelectedItems(0) IsNot ClassListViewItemImage) Then
-                Return
-            End If
-
-            Dim mSelectedItem = DirectCast(ListViewEx_Images.SelectedItems(0), ClassListViewItemImage)
-            If (Not IO.File.Exists(mSelectedItem.m_ImageInfo.sFileA)) Then
-                Return
-            End If
-
-            Process.Start("explorer.exe", String.Format("/select,{0}", mSelectedItem.m_ImageInfo.sFileA))
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-    Private Sub FileBToolStripMenuItem2_Click(sender As Object, e As EventArgs) Handles FileBToolStripMenuItem2.Click
-        Try
-            If (ListViewEx_Images.SelectedItems.Count <> 1) Then
-                Return
-            End If
-
-            If (TypeOf ListViewEx_Images.SelectedItems(0) IsNot ClassListViewItemImage) Then
-                Return
-            End If
-
-            Dim mSelectedItem = DirectCast(ListViewEx_Images.SelectedItems(0), ClassListViewItemImage)
-            If (Not IO.File.Exists(mSelectedItem.m_ImageInfo.sFileB)) Then
-                Return
-            End If
-
-            Process.Start("explorer.exe", String.Format("/select,{0}", mSelectedItem.m_ImageInfo.sFileB))
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-    Private Sub FileAToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles FileAToolStripMenuItem.Click
-        Try
-            If (MessageBox.Show(String.Format("Do you want to delete {0} files?", ListViewEx_Images.SelectedItems.Count), "Delete files", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.No) Then
-                Return
-            End If
-
-            'Remove image from preview because the file will be in use
-            SetPreviewImageA(Nothing)
-            SetPreviewImageB(Nothing)
-
-            Try
-                g_bIgnoreSelection = True
-
-                Try
-                    ListViewEx_Images.BeginUpdate()
-
-                    For Each mItem As ListViewItem In ListViewEx_Images.SelectedItems
-                        If (TypeOf mItem IsNot ClassListViewItemImage) Then
-                            Return
-                        End If
-
-                        Dim mSelectedItem = DirectCast(mItem, ClassListViewItemImage)
-                        If (Not IO.File.Exists(mSelectedItem.m_ImageInfo.sFileA)) Then
-                            Return
-                        End If
-
-                        IO.File.Delete(mSelectedItem.m_ImageInfo.sFileA)
-
-                        ListViewEx_Images.Items.Remove(mItem)
-                    Next
-                Finally
-                    ListViewEx_Images.EndUpdate()
-                End Try
-            Finally
-                g_bIgnoreSelection = False
-            End Try
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-    Private Sub FileBToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles FileBToolStripMenuItem.Click
-        Try
-            If (MessageBox.Show(String.Format("Do you want to delete {0} files?", ListViewEx_Images.SelectedItems.Count), "Delete files", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.No) Then
-                Return
-            End If
-
-            'Remove image from preview because the file will be in use
-            SetPreviewImageA(Nothing)
-            SetPreviewImageB(Nothing)
-
-            Try
-                g_bIgnoreSelection = True
-
-                Try
-                    ListViewEx_Images.BeginUpdate()
-
-                    For Each mItem As ListViewItem In ListViewEx_Images.SelectedItems
-                        If (TypeOf mItem IsNot ClassListViewItemImage) Then
-                            Return
-                        End If
-
-                        Dim mSelectedItem = DirectCast(mItem, ClassListViewItemImage)
-                        If (Not IO.File.Exists(mSelectedItem.m_ImageInfo.sFileB)) Then
-                            Return
-                        End If
-
-                        IO.File.Delete(mSelectedItem.m_ImageInfo.sFileB)
-
-                        ListViewEx_Images.Items.Remove(mItem)
-                    Next
-                Finally
-                    ListViewEx_Images.EndUpdate()
-                End Try
-            Finally
-                g_bIgnoreSelection = False
-            End Try
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-    Private Sub ContextMenuStrip_Images_Opening(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles ContextMenuStrip_Images.Opening
-        ToolStripMenuItem_Open.Enabled = (ListViewEx_Images.SelectedItems.Count = 1)
-        ToolStripMenuItem_OpenExplorer.Enabled = (ListViewEx_Images.SelectedItems.Count = 1)
-        ToolStripMenuItem_Remove.Enabled = (ListViewEx_Images.SelectedItems.Count > 0)
-    End Sub
-
     Private Sub PictureBox_ImageAPreview_Click(sender As Object, e As EventArgs) Handles PictureBox_ImageAPreview.Click
         Try
-            If (ListViewEx_Images.SelectedItems.Count <> 1) Then
+            If (PictureBox_ImageAPreview.Tag Is Nothing) Then
                 Return
             End If
 
-            If (TypeOf ListViewEx_Images.SelectedItems(0) IsNot ClassListViewItemImage) Then
+            Dim sFile As String = CStr(PictureBox_ImageAPreview.Tag)
+            If (Not IO.File.Exists(sFile)) Then
                 Return
             End If
 
-            Dim mSelectedItem = DirectCast(ListViewEx_Images.SelectedItems(0), ClassListViewItemImage)
-            If (Not IO.File.Exists(mSelectedItem.m_ImageInfo.sFileA)) Then
-                Return
-            End If
-
-            Process.Start(mSelectedItem.m_ImageInfo.sFileA)
+            Process.Start(sFile)
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -406,24 +220,111 @@ Public Class FormMain
 
     Private Sub PictureBox_ImageBPreview_Click(sender As Object, e As EventArgs) Handles PictureBox_ImageBPreview.Click
         Try
-            If (ListViewEx_Images.SelectedItems.Count <> 1) Then
+            If (PictureBox_ImageBPreview.Tag Is Nothing) Then
                 Return
             End If
 
-            If (TypeOf ListViewEx_Images.SelectedItems(0) IsNot ClassListViewItemImage) Then
+            Dim sFile As String = CStr(PictureBox_ImageBPreview.Tag)
+            If (Not IO.File.Exists(sFile)) Then
                 Return
             End If
 
-            Dim mSelectedItem = DirectCast(ListViewEx_Images.SelectedItems(0), ClassListViewItemImage)
-            If (Not IO.File.Exists(mSelectedItem.m_ImageInfo.sFileB)) Then
-                Return
-            End If
-
-            Process.Start(mSelectedItem.m_ImageInfo.sFileB)
+            Process.Start(sFile)
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
+
+
+    Private Sub ToolStripMenuItem_Open_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem_Open.Click
+        Try
+            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
+
+            If (mTreeView.SelectedNode Is Nothing) Then
+                Return
+            End If
+
+            Dim sFile As String = CType(mTreeView.SelectedNode.Tag, String())(0)
+            If (Not IO.File.Exists(sFile)) Then
+                Return
+            End If
+
+            Process.Start(sFile)
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub ToolStripMenuItem_OpenExplorer_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem_OpenExplorer.Click
+        Try
+            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
+
+            If (mTreeView.SelectedNode Is Nothing) Then
+                Return
+            End If
+
+            Dim sFile As String = CType(mTreeView.SelectedNode.Tag, String())(0)
+            If (Not IO.File.Exists(sFile)) Then
+                Return
+            End If
+
+            Process.Start("explorer.exe", String.Format("/select,""{0}""", sFile))
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub ToolStripMenuItem_Remove_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem_Remove.Click
+        Try
+            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
+
+            If (mTreeView.SelectedNode Is Nothing) Then
+                Return
+            End If
+
+            Dim sFile As String = CType(mTreeView.SelectedNode.Tag, String())(0)
+            If (Not IO.File.Exists(sFile)) Then
+                Return
+            End If
+
+            If (MessageBox.Show(String.Format("Do you want to delete {0}?", sFile), "Delete files", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.No) Then
+                Return
+            End If
+
+            IO.File.Delete(sFile)
+
+            'Remove all nodes using this file
+            For i = mTreeView.Nodes.Count - 1 To 0 Step -1
+                Dim mRootNode = mTreeView.Nodes(i)
+
+                For j = mRootNode.Nodes.Count - 1 To 0 Step -1
+                    Dim mSubNode = mRootNode.Nodes(j)
+
+                    Dim sSubNodeFile As String = CType(mSubNode.Tag, String())(0)
+                    If (Not String.Equals(sFile, sSubNodeFile, StringComparison.InvariantCultureIgnoreCase)) Then
+                        Continue For
+                    End If
+
+                    mRootNode.Nodes.RemoveAt(j)
+                Next
+
+                If (mRootNode.Nodes.Count < 1) Then
+                    mTreeView.Nodes.RemoveAt(i)
+                    Continue For
+                End If
+
+                Dim sRootNodeFile As String = CType(mRootNode.Tag, String())(0)
+                If (Not String.Equals(sFile, sRootNodeFile, StringComparison.InvariantCultureIgnoreCase)) Then
+                    Continue For
+                End If
+
+                mTreeView.Nodes.RemoveAt(i)
+            Next
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
 
     Class ClassScanner
         Private g_fFormMain As FormMain
@@ -526,7 +427,7 @@ Public Class FormMain
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripProgressBar_Progress.Visible = True)
 
                 Dim sFiles = IO.Directory.GetFiles(sDirectory, "*.*", If(bIncludeSubDirectories, IO.SearchOption.AllDirectories, IO.SearchOption.TopDirectoryOnly))
-                Dim mImageInfo As New List(Of STRUC_IMAGE_INFO)
+                Dim mImageInfo As New Dictionary(Of String, Dictionary(Of String, STRUC_IMAGE_INFO))(StringComparison.InvariantCultureIgnoreCase)
                 Dim mThreads As New List(Of Threading.Thread)
                 Dim mFilesThreads As New Queue(Of String)
                 Dim mThreadInfo As New Dictionary(Of String, Object)
@@ -651,10 +552,7 @@ Public Class FormMain
                     mFailedFiles.Add(sFile)
                 Next
 
-                ' Sort by difference
-                mImageInfo.Sort(Function(a As STRUC_IMAGE_INFO, b As STRUC_IMAGE_INFO)
-                                    Return -a.iDifference.CompareTo(b.iDifference)
-                                End Function)
+                Dim mDuplicateFiles = mImageInfo.ToArray
 
                 g_fFormMain.BeginInvoke(Sub()
                                             Try
@@ -671,16 +569,66 @@ Public Class FormMain
 
 
                 g_fFormMain.BeginInvoke(Sub()
-                                            Try
-                                                g_fFormMain.ListViewEx_Images.BeginUpdate()
-                                                g_fFormMain.ListViewEx_Images.Items.Clear()
+                                            g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Visible = False
+                                            g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.Clear()
 
-                                                For Each mItem In mImageInfo.ToArray
-                                                    g_fFormMain.ListViewEx_Images.Items.Add(New ClassListViewItemImage(mItem))
+                                            Dim mRootNodeCollection As New List(Of TreeNode)
+
+                                            For Each mFileItem In mDuplicateFiles
+                                                If (mFileItem.Value Is Nothing OrElse mFileItem.Value.Count < 2) Then
+                                                    Continue For
+                                                End If
+
+                                                Dim mSubNodeCollection As New List(Of TreeNode)
+
+                                                Dim mRootFileItem = mFileItem.Value.Values(0)
+
+                                                Dim mRootTreeNode As New TreeNode(" > ")
+                                                mRootTreeNode.NodeFont = New Font(g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Font, FontStyle.Bold)
+                                                mRootTreeNode.Tag = New String() {
+                                                    mRootFileItem.sFile,
+                                                    CStr(Math.Ceiling(mRootFileItem.iDifference * 100)),
+                                                    ClassHelpers.FormatBytes(mRootFileItem.iFileSize)}
+
+                                                For i = 1 To mFileItem.Value.Values.Count - 1
+                                                    Dim mSubFileItem = mFileItem.Value.Values(i)
+
+                                                    Dim mSubTreeNode As New TreeNode("")
+                                                    mSubTreeNode.Tag = New String() {
+                                                        mSubFileItem.sFile,
+                                                        CStr(Math.Ceiling(mSubFileItem.iDifference * 100)),
+                                                        ClassHelpers.FormatBytes(mSubFileItem.iFileSize)}
+
+                                                    mSubNodeCollection.Add(mSubTreeNode)
                                                 Next
-                                            Finally
-                                                g_fFormMain.ListViewEx_Images.EndUpdate()
-                                            End Try
+
+                                                mSubNodeCollection.Sort(Function(a As TreeNode, b As TreeNode)
+                                                                            Dim iDiffA As Integer = CInt(CType(a.Tag, String())(1))
+                                                                            Dim iDiffB As Integer = CInt(CType(b.Tag, String())(1))
+
+                                                                            Return iDiffB.CompareTo(iDiffA)
+                                                                        End Function)
+
+
+                                                mRootTreeNode.Nodes.AddRange(mSubNodeCollection.ToArray)
+                                                mRootNodeCollection.Add(mRootTreeNode)
+                                            Next
+
+                                            mRootNodeCollection.Sort(Function(a As TreeNode, b As TreeNode) As Integer
+                                                                         Dim sFileA As String = CType(a.Tag, String())(0)
+                                                                         Dim sFileB As String = CType(b.Tag, String())(0)
+
+                                                                         Return sFileA.CompareTo(sFileB)
+                                                                     End Function)
+
+                                            g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.AddRange(mRootNodeCollection.ToArray)
+                                            g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.ExpandAll()
+
+                                            If (g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.Count > 0) Then
+                                                g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes(0).EnsureVisible()
+                                            End If
+
+                                            g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Visible = True
                                         End Sub)
 
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripProgressBar_Progress.Value = g_fFormMain.ToolStripProgressBar_Progress.Maximum)
@@ -706,7 +654,7 @@ Public Class FormMain
 
             Dim mFilesThreads = DirectCast(mData("FilesThreads"), Queue(Of String))
             Dim sTotalFiles = DirectCast(mData("TotalFiles"), String())
-            Dim mImageInfo = DirectCast(mData("ImageInfo"), List(Of STRUC_IMAGE_INFO))
+            Dim mImageInfo = DirectCast(mData("ImageInfo"), Dictionary(Of String, Dictionary(Of String, STRUC_IMAGE_INFO)))
             Dim mThreadInfo = DirectCast(mData("ThreadInfo"), Dictionary(Of String, Object))
 
             Dim iMaxImageDiff = DirectCast(mData("MaxImageDiff"), Integer)
@@ -795,22 +743,12 @@ Public Class FormMain
                                 End If
 
                                 SyncLock g_mLock
-                                    Dim bSkip As Boolean = False
-                                    For Each mItem In mImageInfo
-                                        If (String.Equals(sFileA, mItem.sFileB, StringComparison.InvariantCultureIgnoreCase) AndAlso
-                                            String.Equals(sFileB, mItem.sFileA, StringComparison.InvariantCultureIgnoreCase)) Then
-                                            bSkip = True
-                                            Exit For
-                                        End If
-                                    Next
-
-                                    If (Not bSkip) Then
-                                        mImageInfo.Add(New STRUC_IMAGE_INFO(sFileA,
-                                                                            sFileB,
-                                                                            iAvgDiff,
-                                                                            New IO.FileInfo(sFileA).Length,
-                                                                            New IO.FileInfo(sFileB).Length))
+                                    If (Not mImageInfo.ContainsKey(sFileA)) Then
+                                        mImageInfo(sFileA) = New Dictionary(Of String, STRUC_IMAGE_INFO)
+                                        mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1, New IO.FileInfo(sFileA).Length)
                                     End If
+
+                                    mImageInfo(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length)
                                 End SyncLock
 
                             Catch ex As Threading.ThreadAbortException
@@ -1032,24 +970,6 @@ Public Class FormMain
         End Sub
     End Class
 
-    Class ClassListViewItemImage
-        Inherits ListViewItem
-
-        ReadOnly Property m_ImageInfo As STRUC_IMAGE_INFO
-
-        Public Sub New(_ImageInfo As STRUC_IMAGE_INFO)
-            MyBase.New(New String() {
-                       _ImageInfo.sFileA,
-                       _ImageInfo.sFileB,
-                       CStr(Math.Ceiling(_ImageInfo.iDifference * 100)),
-                       ClassHelpers.FormatBytes(_ImageInfo.iFileASize),
-                       ClassHelpers.FormatBytes(_ImageInfo.iFileBSize)
-                       })
-
-            m_ImageInfo = _ImageInfo
-        End Sub
-    End Class
-
     Class ClassHelpers
         Public Shared Function FormatBytes(lBytes As Double) As String
             Try
@@ -1063,33 +983,102 @@ Public Class FormMain
             Catch : End Try
             Return lBytes.ToString("N") & " Bytes"
         End Function
-
-
     End Class
 
-    Class STRUC_IMAGE_INFO
-        Public sFileA As String
-        Public sFileB As String
-        Public iDifference As Double
-        Public iFileASize As Double
-        Public iFileBSize As Double
+    Structure STRUC_IMAGE_INFO
+        Dim sFile As String
+        Dim iDifference As Double
+        Dim iFileSize As Double
 
-        Public Sub New(_FileA As String, _FileB As String, _Difference As Double, _FileASize As Double, _FileBSize As Double)
-            sFileA = _FileA
-            sFileB = _FileB
+        Sub New(_File As String, _Difference As Double, _FileSize As Double)
+            sFile = _File
             iDifference = _Difference
-            iFileASize = _FileASize
-            iFileBSize = _FileBSize
+            iFileSize = _FileSize
         End Sub
-    End Class
+    End Structure
+
+    Private Sub TreeView_AfterNode(sender As Object, e As TreeViewEventArgs)
+        Try
+            Dim mFileNode = e.Node
+            Dim mParentFileNode = mFileNode.Parent
+
+            If (mFileNode Is Nothing) Then
+                Return
+            End If
+
+            Dim sFileA As String = Nothing
+            Dim sFileB As String = Nothing
+
+            If (mFileNode IsNot Nothing) Then
+                If (mParentFileNode Is Nothing) Then
+                    sFileA = DirectCast(mFileNode.Tag, String())(0)
+                    sFileB = Nothing
+                Else
+                    sFileB = DirectCast(mFileNode.Tag, String())(0)
+                    sFileA = DirectCast(mParentFileNode.Tag, String())(0)
+                End If
+            End If
+
+            If (sFileA IsNot Nothing) Then
+                If (IO.File.Exists(sFileA)) Then
+                    Try
+                        Using i As New Bitmap(sFileA)
+                            SetPreviewImageA(i, sFileA)
+                        End Using
+                    Catch ex As Exception
+                        Try
+                            ' Unsupported image, try Magick
+                            Using i As New ImageMagick.MagickImage(sFileA)
+                                SetPreviewImageA(i, sFileA)
+                            End Using
+                        Catch ex2 As Exception
+                            SetPreviewImageA(Nothing, Nothing)
+                        End Try
+                    End Try
+                Else
+                    SetPreviewImageA(Nothing, Nothing)
+                End If
+            Else
+                SetPreviewImageA(Nothing, Nothing)
+            End If
+
+            If (sFileB IsNot Nothing) Then
+                If (IO.File.Exists(sFileB)) Then
+                    Try
+                        Using i As New Bitmap(sFileB)
+                            SetPreviewImageB(i, sFileB)
+                        End Using
+                    Catch ex As Exception
+                        Try
+                            ' Unsupported image, try Magick
+                            Using i As New ImageMagick.MagickImage(sFileB)
+                                SetPreviewImageB(i, sFileB)
+                            End Using
+                        Catch ex2 As Exception
+                            SetPreviewImageB(Nothing, Nothing)
+                        End Try
+                    End Try
+                Else
+                    SetPreviewImageB(Nothing, Nothing)
+                End If
+            Else
+                SetPreviewImageB(Nothing, Nothing)
+            End If
+
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
 
     Private Sub FormMain_FormClosed(sender As Object, e As FormClosedEventArgs) Handles Me.FormClosed
         CleanUp()
     End Sub
 
     Private Sub CleanUp()
-        SetPreviewImageA(Nothing)
-        SetPreviewImageB(Nothing)
+        RemoveHandler ClassTreeViewColumns_Images.m_TreeView.AfterSelect, AddressOf TreeView_AfterNode
+
+        SetPreviewImageA(Nothing, Nothing)
+        SetPreviewImageB(Nothing, Nothing)
 
         If (g_ClassScanner IsNot Nothing) Then
             g_ClassScanner.Abort()
