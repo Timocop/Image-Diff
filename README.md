@@ -1,5 +1,6 @@
-# PNG-to-JPG-Analysis
-Image analysis tool that can batch convert PNG images to JPG and shows size differences between PNG and JPG images.
+# Image-Diff
+Fast and simple image comparing tool either using default .NET GDI or third-party Magick.
 
 ## Pictures
-![](https://i.imgur.com/PWwMIfx.png)
+![](https://github.com/user-attachments/assets/32cb2b66-5934-4f26-be35-6a0dd93e3ebc)
+
