@@ -56,6 +56,10 @@
     End Sub
 
     Private Sub TreeView1_DrawNode(sender As Object, e As DrawTreeNodeEventArgs) Handles TreeView1.DrawNode
+        If (Not TreeView1.Visible) Then
+            Return
+        End If
+
         e.DrawDefault = True
 
         Dim mRect As Rectangle = e.Bounds
