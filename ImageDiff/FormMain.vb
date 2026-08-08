@@ -1,8 +1,6 @@
-﻿#Const USE_MAGICK = 0
+﻿Public Class FormMain
+    Public Const HASH_CACHE_VERSION As Integer = 1
 
-Imports System.Security.Cryptography
-
-Public Class FormMain
     Private g_ClassScanner As ClassScanner
 
     Private g_bIgnoreSelection As Boolean = False
@@ -446,16 +444,22 @@ Public Class FormMain
                             Dim iFilesPerSec As Double = 0.0
 
                             If (bUseCaching) Then
-                                Select Case (j)
-                                    Case 0
-                                        g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripStatusLabel_Progress.Text = "Loading cache...")
+                                Try
+                                    Select Case (j)
+                                        Case 0
+                                            g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripStatusLabel_Progress.Text = "Loading cache...")
 
-                                        LoadCache()
-                                    Case 1
-                                        g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripStatusLabel_Progress.Text = "Saving cache...")
+                                            LoadCache()
+                                        Case 1
+                                            g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripStatusLabel_Progress.Text = "Saving cache...")
 
-                                        SaveCache()
-                                End Select
+                                            SaveCache()
+                                    End Select
+                                Catch ex As Threading.ThreadAbortException
+                                    Throw
+                                Catch ex As Exception
+                                    MessageBox.Show(ex.Message, "Unable to use save/load hash cache", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                                End Try
                             End If
 
                             SyncLock g_mLock
@@ -893,81 +897,263 @@ Public Class FormMain
         Private Sub LoadCache()
             Dim iHashingMethod As Integer = m_HashingMethod
             Dim iHashSize As Integer = m_ThumbSize
-            Dim sCacheFile As String = IO.Path.Combine(Application.StartupPath, String.Format("hash_cache_{0}_{1}.dat", iHashingMethod, iHashSize))
+            Dim bHighQualityHashing As Boolean = m_HighQualityHashing
+            Dim sCacheFile As String = IO.Path.Combine(Application.StartupPath, String.Format("hash_cache_{0}_{1}_{2}.dat", iHashingMethod, iHashSize, If(bHighQualityHashing, 1, 0)))
 
             If (Not IO.File.Exists(sCacheFile)) Then
                 Return
             End If
 
             SyncLock g_mLock
-                For Each sLine As String In IO.File.ReadAllLines(sCacheFile)
-                    Dim sSplitLine As String() = sLine.Split(";"c)
-                    If (sSplitLine.Length <> 3) Then
-                        Continue For
-                    End If
+                Using mStream As New IO.MemoryStream()
+                    Using mBinWriter As New IO.BinaryReader(mStream)
+                        Using mFileStream As New IO.FileStream(sCacheFile, IO.FileMode.Open, IO.FileAccess.Read)
+                            mFileStream.CopyTo(mStream)
 
-                    Dim sFileLastModified As String = sSplitLine(0)
-                    Dim sFile As String = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(sSplitLine(1)))
-                    Dim sImageHash As String = sSplitLine(2)
+                            mStream.Position = 0
 
-                    If (Not IO.File.Exists(sFile)) Then
-                        Continue For
-                    End If
+                            '[Checksum:Int32][Version:Int32]
+                            ' ... [FilePathLength:Int32][FilePath:Byte()][HashMethod:Int32][FileModified:Int64][HashSize:Int32][Hash:Byte()]
 
-                    Dim sNewFileLastModified As String = CStr(New IO.FileInfo(sFile).LastWriteTime.Ticks)
-                    If (sNewFileLastModified <> sFileLastModified) Then
-                        Continue For
-                    End If
+                            Dim iConfigChecksum As Integer = mBinWriter.ReadInt32() '[Checksum:Int32]
 
-                    Dim iHashBits(sImageHash.Length - 1) As Byte
-                    Dim iHashBitCount As Integer = 0
+                            ' Check checksum
+                            If (True) Then
+                                Dim iPostChecksumPos As Long = mStream.Position
+                                Dim iChecksum As Integer = 0
 
-                    For i = 0 To sImageHash.Length - 1
-                        If (sImageHash(i) = "1"c) Then
-                            iHashBits(i) = 1
-                            iHashBitCount += 1
-                        Else
-                            iHashBits(i) = 0
-                            iHashBitCount += 1
-                        End If
-                    Next
+                                While (mStream.Position < mStream.Length)
+                                    iChecksum = (iChecksum * 101) + mStream.ReadByte
+                                End While
 
-                    g_mHashCache(sFile) = iHashBits
-                Next
+                                If (iConfigChecksum <> iChecksum) Then
+                                    Throw New ArgumentException("Hash cache checksum failed")
+                                End If
+
+                                mStream.Position = iPostChecksumPos
+                            End If
+
+                            Dim iConfigVersion As Integer = mBinWriter.ReadInt32() '[Version:Int32]
+                            If (HASH_CACHE_VERSION <> iConfigVersion) Then
+                                Return
+                            End If
+
+                            While (mStream.Position < mStream.Length)
+                                Dim iFilePathLen As Integer = mBinWriter.ReadInt32() '[FilePathLength:Int32]
+                                If (iFilePathLen < 1) Then
+                                    Throw New ArgumentException("File path size cant be zero")
+                                End If
+
+                                Dim sFilePath As String = System.Text.Encoding.UTF8.GetString(mBinWriter.ReadBytes(iFilePathLen)) '[FilePath:Byte()]
+                                Dim iFileHashMethod As Integer = mBinWriter.ReadInt32() '[HashMethod:Int32]
+                                Dim iFileModifiedTimestamp As Long = mBinWriter.ReadInt64() '[FileModified:Int64]
+                                Dim iHashByteCount As Integer = mBinWriter.ReadInt32() '[HashSize:Int32]
+
+                                Dim iByteCount As Integer = 0
+                                Dim iHashBytes As New List(Of Byte)
+                                Dim mBitReader As New ClassBitReader(mStream)
+                                For i = 0 To iHashByteCount - 1
+                                    iHashBytes.AddRange(mBitReader.ReadBit()) '[Hash:Byte()]
+                                Next
+                                iByteCount = mBitReader.m_TotalByteCount
+
+                                If (iHashingMethod <> iFileHashMethod) Then
+                                    Continue While
+                                End If
+
+                                If (iHashByteCount <> iByteCount) Then
+                                    Continue While
+                                End If
+
+                                If ((iHashSize * iHashSize) <> iHashBytes.Count) Then
+                                    Continue While
+                                End If
+
+                                If (Not IO.File.Exists(sFilePath)) Then
+                                    Continue While
+                                End If
+
+                                Dim iFileLastModified As Long = New IO.FileInfo(sFilePath).LastWriteTime.Ticks
+                                If (iFileLastModified <> iFileModifiedTimestamp) Then
+                                    Continue While
+                                End If
+
+                                g_mHashCache(sFilePath) = iHashBytes.ToArray
+                            End While
+                        End Using
+                    End Using
+                End Using
             End SyncLock
         End Sub
 
         Private Sub SaveCache()
             Dim iHashingMethod As Integer = m_HashingMethod
             Dim iHashSize As Integer = m_ThumbSize
-            Dim sCacheFile As String = IO.Path.Combine(Application.StartupPath, String.Format("hash_cache_{0}_{1}.dat", iHashingMethod, iHashSize))
-
-            Dim sCacheBuilder As New Text.StringBuilder
+            Dim bHighQualityHashing As Boolean = m_HighQualityHashing
+            Dim sCacheFile As String = IO.Path.Combine(Application.StartupPath, String.Format("hash_cache_{0}_{1}_{2}.dat", iHashingMethod, iHashSize, If(bHighQualityHashing, 1, 0)))
 
             SyncLock g_mLock
-                For Each mItem In g_mHashCache
-                    Dim sFile As String = mItem.Key
-                    Dim iImageHasBits As Byte() = mItem.Value
+                Using mStream As New IO.MemoryStream()
+                    Using mBinReader As New IO.BinaryWriter(mStream)
+                        Using mFileStream As New IO.FileStream(sCacheFile, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite)
+                            '[Checksum:Int32][Version:Int32]
+                            ' ... [FilePathLength:Int32][FilePath:Byte()][HashMethod:Int32][FileModified:Int64][HashSize:Int32][Hash:Byte()]
 
+                            'Checksum not yet known
+                            Dim iChecksum As Integer = 0
+                            mBinReader.Write(iChecksum) '[Checksum:Int32] 
+                            Dim iPostChecksumPos As Long = mStream.Position
 
-                    Dim sImageHash As New Text.StringBuilder(iImageHasBits.Length)
-                    For i = 0 To iImageHasBits.Length - 1
-                        sImageHash.Append(CStr(iImageHasBits(i)))
-                    Next
+                            mBinReader.Write(HASH_CACHE_VERSION) '[Version:Int32]
 
-                    If (Not IO.File.Exists(sFile)) Then
-                        Continue For
-                    End If
+                            For Each mItem In g_mHashCache
+                                Dim sFile As String = mItem.Key
+                                Dim iHash As Byte() = mItem.Value
 
-                    Dim sFileLastModified As String = CStr(New IO.FileInfo(mItem.Key).LastWriteTime.Ticks)
-                    Dim sFilePath As String = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sFile))
+                                If (Not IO.File.Exists(sFile)) Then
+                                    Continue For
+                                End If
 
-                    sCacheBuilder.AppendFormat("{0};{1};{2}", sFileLastModified, sFilePath, sImageHash.ToString).AppendLine()
-                Next
+                                If (sFile.Length < 1) Then
+                                    Continue For
+                                End If
+
+                                If (iHash.Length < 1) Then
+                                    Continue For
+                                End If
+
+                                Dim iFilePath As Byte() = System.Text.Encoding.UTF8.GetBytes(sFile)
+                                Dim iFilePathLen As Integer = iFilePath.Length
+                                Dim iFileLastModified As Long = New IO.FileInfo(sFile).LastWriteTime.Ticks
+
+                                mBinReader.Write(iFilePathLen) '[FilePathLength:Int32]
+                                mBinReader.Write(iFilePath) '[FilePath:Byte()]
+                                mBinReader.Write(iHashingMethod) '[HashMethod:Int32]
+                                mBinReader.Write(iFileLastModified) '[FileModified:Int64]
+
+                                Dim iPreHashPos As Long = mStream.Position
+
+                                ' We dont know the bits yet
+                                Dim iByteCount As Integer = 0
+                                mBinReader.Write(iByteCount) ' [HashSize:Int32]
+
+                                ' Compress byte array into bool
+                                Dim mBitWriter As New ClassBitWriter(mStream)
+                                For i = 0 To iHash.Length - 1
+                                    mBitWriter.WriteBit(iHash(i)) '[Hash:Byte()]
+                                Next
+                                mBitWriter.Flush()
+                                iByteCount = mBitWriter.m_TotalByteCount
+
+                                ' Go back and set bit count
+                                If (True) Then
+                                    Dim iCurrentPos = mStream.Position
+
+                                    mStream.Position = iPreHashPos
+
+                                    mBinReader.Write(iByteCount) ' [HashSize:Int32]
+
+                                    mStream.Position = iCurrentPos
+                                End If
+                            Next
+
+                            ' Calculate the checksum 
+                            If (True) Then
+                                mStream.Position = iPostChecksumPos
+
+                                iChecksum = 0
+                                While (mStream.Position < mStream.Length)
+                                    iChecksum = (iChecksum * 101) + mStream.ReadByte()
+                                End While
+
+                                mStream.Position = 0
+
+                                ' Go back and set checksum
+                                mBinReader.Write(iChecksum) '[Checksum:Int32] 
+                            End If
+
+                            mStream.Position = 0
+
+                            mStream.CopyTo(mFileStream)
+                        End Using
+                    End Using
+                End Using
             End SyncLock
-
-            IO.File.WriteAllText(sCacheFile, sCacheBuilder.ToString)
         End Sub
+
+        Class ClassBitWriter
+            Private g_mStream As IO.Stream
+            Private g_iCurrentByte As Byte = 0
+            Private g_iBitIndex As Integer = 0
+            Private g_iTotalByteCount As Integer = 0
+
+            Sub New(_Stream As IO.Stream)
+                g_mStream = _Stream
+            End Sub
+
+            Public Sub WriteBit(iValue As Byte)
+                If (iValue > 0) Then
+                    g_iCurrentByte = g_iCurrentByte Or CByte(1 << g_iBitIndex)
+                End If
+
+                g_iBitIndex += 1
+
+                If (g_iBitIndex = 8) Then
+                    g_mStream.WriteByte(g_iCurrentByte)
+                    g_iTotalByteCount += 1
+                    g_iCurrentByte = 0
+                    g_iBitIndex = 0
+                End If
+            End Sub
+
+            Public Sub Flush()
+                If (g_iBitIndex > 0) Then
+                    g_mStream.WriteByte(g_iCurrentByte)
+                    g_iTotalByteCount += 1
+                    g_iCurrentByte = 0
+                    g_iBitIndex = 0
+                End If
+            End Sub
+
+            ReadOnly Property m_TotalByteCount As Integer
+                Get
+                    Return g_iTotalByteCount
+                End Get
+            End Property
+        End Class
+
+        Class ClassBitReader
+            Private g_mStream As IO.Stream
+            Private g_iTotalByteCount As Integer = 0
+
+            Sub New(_Stream As IO.Stream)
+                g_mStream = _Stream
+            End Sub
+
+            Public Function ReadBit() As Byte()
+                Dim iByteSize = 8
+                Dim iCompressedByte As Byte = CByte(g_mStream.ReadByte)
+                Dim iByte(iByteSize - 1) As Byte
+
+                For i = 0 To iByte.Length - 1
+                    If ((iCompressedByte And (1 << i)) = (1 << i)) Then
+                        iByte(i) = 1
+                    Else
+                        iByte(i) = 0
+                    End If
+                Next
+
+                g_iTotalByteCount += 1
+
+                Return iByte
+            End Function
+
+            ReadOnly Property m_TotalByteCount As Integer
+                Get
+                    Return g_iTotalByteCount
+                End Get
+            End Property
+        End Class
     End Class
 
     Class ClassHelpers
