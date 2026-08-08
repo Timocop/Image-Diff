@@ -420,7 +420,7 @@ Partial Class FormMain
         Me.GroupBox3.Size = New System.Drawing.Size(262, 228)
         Me.GroupBox3.TabIndex = 3
         Me.GroupBox3.TabStop = False
-        Me.GroupBox3.Text = "Image A Preview"
+        Me.GroupBox3.Text = "Main Image"
         '
         'PictureBox_ImageAPreview
         '
@@ -442,7 +442,7 @@ Partial Class FormMain
         Me.GroupBox2.Size = New System.Drawing.Size(262, 228)
         Me.GroupBox2.TabIndex = 4
         Me.GroupBox2.TabStop = False
-        Me.GroupBox2.Text = "Image B Preview"
+        Me.GroupBox2.Text = "Secondary Image"
         '
         'PictureBox_ImageBPreview
         '
@@ -467,6 +467,7 @@ Partial Class FormMain
         '
         'ClassListViewEx_FailedFiles
         '
+        Me.ClassListViewEx_FailedFiles.BorderStyle = System.Windows.Forms.BorderStyle.None
         Me.ClassListViewEx_FailedFiles.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ColumnHeader11})
         Me.ClassListViewEx_FailedFiles.Dock = System.Windows.Forms.DockStyle.Fill
         Me.ClassListViewEx_FailedFiles.HideSelection = False
