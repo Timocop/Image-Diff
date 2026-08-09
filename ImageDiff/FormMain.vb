@@ -13,6 +13,18 @@
         __MAX
     End Enum
 
+    Structure STRUC_IMAGE_INFO
+        Dim sFile As String
+        Dim iDifference As Double
+        Dim iFileSize As Double
+
+        Sub New(_File As String, _Difference As Double, _FileSize As Double)
+            sFile = _File
+            iDifference = _Difference
+            iFileSize = _FileSize
+        End Sub
+    End Structure
+
     Structure STRUC_HASHING_SIZE_ITEM
         Dim iSize As Integer
 
@@ -62,6 +74,7 @@
         ClassTreeViewColumns_Images.m_TreeView.ContextMenuStrip = ContextMenuStrip_Images
 
         AddHandler ClassTreeViewColumns_Images.m_TreeView.AfterSelect, AddressOf TreeView_AfterNode
+        AddHandler ClassTreeViewColumns_Images.m_TreeView.MouseDoubleClick, AddressOf TreeView_MouseDoubleClick
 
         NumericUpDown_Threads.Minimum = 1
         NumericUpDown_Threads.Maximum = 64
@@ -91,78 +104,150 @@
         ImageMagick.OpenCL.IsEnabled = False
     End Sub
 
-    Public Sub SetPreviewImageA(mImage As Object, sFile As String)
-        If (PictureBox_ImageAPreview.Image IsNot Nothing) Then
-            PictureBox_ImageAPreview.Image.Dispose()
+    Private Sub TreeView_MouseDoubleClick(sender As Object, e As MouseEventArgs)
+        Try
+            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
 
-            PictureBox_ImageAPreview.Image = Nothing
-            PictureBox_ImageAPreview.Tag = Nothing
-        End If
+            If (mTreeView.SelectedNode Is Nothing) Then
+                Return
+            End If
 
-        If (mImage Is Nothing) Then
-            Return
-        End If
+            Dim sFile As String = CType(mTreeView.SelectedNode.Tag, String())(0)
+            If (Not IO.File.Exists(sFile)) Then
+                Return
+            End If
 
-        Select Case (True)
-            Case (TypeOf mImage Is Image)
-                Dim mNewImage = DirectCast(mImage, Image)
-
-                Using mStream As New IO.MemoryStream()
-                    mNewImage.Save(mStream, Imaging.ImageFormat.Jpeg)
-                    mStream.Position = 0
-
-                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageAPreview.Tag = sFile
-                End Using
-
-            Case (TypeOf mImage Is ImageMagick.MagickImage)
-                Dim mNewImage = DirectCast(mImage, ImageMagick.MagickImage)
-
-                Using mStream As New IO.MemoryStream()
-                    mNewImage.Write(mStream, ImageMagick.MagickFormat.Jpg)
-                    mStream.Position = 0
-
-                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageAPreview.Tag = sFile
-                End Using
-        End Select
+            Process.Start(sFile)
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
 
-    Public Sub SetPreviewImageB(mImage As Object, sFile As String)
-        If (PictureBox_ImageBPreview.Image IsNot Nothing) Then
-            PictureBox_ImageBPreview.Image.Dispose()
+    Private Sub TreeView_AfterNode(sender As Object, e As TreeViewEventArgs)
+        Try
+            Dim mFileNode = e.Node
+            Dim mParentFileNode = mFileNode.Parent
 
-            PictureBox_ImageBPreview.Image = Nothing
-            PictureBox_ImageBPreview.Tag = Nothing
-        End If
+            If (mFileNode Is Nothing) Then
+                Return
+            End If
 
-        If (mImage Is Nothing) Then
+            Dim sFileA As String = Nothing
+            Dim sFileB As String = Nothing
+
+            If (mFileNode IsNot Nothing) Then
+                If (mParentFileNode Is Nothing) Then
+                    sFileA = DirectCast(mFileNode.Tag, String())(0)
+                    sFileB = Nothing
+                Else
+                    sFileB = DirectCast(mFileNode.Tag, String())(0)
+                    sFileA = DirectCast(mParentFileNode.Tag, String())(0)
+                End If
+            End If
+
+            If (sFileA IsNot Nothing) Then
+                If (IO.File.Exists(sFileA)) Then
+                    Try
+                        Using i As New Bitmap(sFileA)
+                            SetPreviewImageA(i, sFileA)
+                        End Using
+                    Catch ex As Exception
+                        Try
+                            ' Unsupported image, try skia
+                            Using i = SkiaSharp.SKBitmap.Decode(sFileA)
+                                SetPreviewImageA(i, sFileA)
+                            End Using
+                        Catch ex2 As Exception
+                            Try
+                                ' Unsupported image, try Magick
+                                Using i As New ImageMagick.MagickImage(sFileA)
+                                    SetPreviewImageA(i, sFileA)
+                                End Using
+                            Catch ex3 As Exception
+                                SetPreviewImageA(Nothing, Nothing)
+                            End Try
+                        End Try
+                    End Try
+                Else
+                    SetPreviewImageA(Nothing, Nothing)
+                End If
+            Else
+                SetPreviewImageA(Nothing, Nothing)
+            End If
+
+            If (sFileB IsNot Nothing) Then
+                If (IO.File.Exists(sFileB)) Then
+                    Try
+                        Using i As New Bitmap(sFileB)
+                            SetPreviewImageB(i, sFileB)
+                        End Using
+                    Catch ex As Exception
+                        Try
+                            ' Unsupported image, try skia
+                            Using i = SkiaSharp.SKBitmap.Decode(sFileB)
+                                SetPreviewImageB(i, sFileB)
+                            End Using
+                        Catch ex2 As Exception
+                            Try
+                                ' Unsupported image, try Magick
+                                Using i As New ImageMagick.MagickImage(sFileB)
+                                    SetPreviewImageB(i, sFileB)
+                                End Using
+                            Catch ex3 As Exception
+                                SetPreviewImageB(Nothing, Nothing)
+                            End Try
+                        End Try
+                    End Try
+                Else
+                    SetPreviewImageB(Nothing, Nothing)
+                End If
+            Else
+                SetPreviewImageB(Nothing, Nothing)
+            End If
+
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Sub LinkLabel_CacheClear_LinkClicked(sender As Object, e As LinkLabelLinkClickedEventArgs) Handles LinkLabel_CacheClear.LinkClicked
+        Dim sFiles = IO.Directory.GetFiles(Application.StartupPath, "*.dat", IO.SearchOption.TopDirectoryOnly)
+        Dim iTotalSize As Double = 0.0
+        Dim iTotalCacheFiles As Integer = 0
+
+        For i = 0 To sFiles.Length - 1
+            If (sFiles(i).StartsWith("hash_cache")) Then
+                Continue For
+            End If
+
+            If (Not IO.File.Exists(sFiles(i))) Then
+                Continue For
+            End If
+
+            iTotalSize += New IO.FileInfo(sFiles(i)).Length
+            iTotalCacheFiles += 1
+        Next
+
+        If (iTotalCacheFiles = 0) Then
+            MessageBox.Show("No cache found", "No cache found", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Return
         End If
 
-        Select Case (True)
-            Case (TypeOf mImage Is Image)
-                Dim mNewImage = DirectCast(mImage, Image)
+        If (MessageBox.Show(String.Format("Do you really want to clear all hash caches?\nTotal cache size: {0}", ClassHelpers.FormatBytes(iTotalSize)).Replace("\n", Environment.NewLine), "Clear hash cache", MessageBoxButtons.YesNo, MessageBoxIcon.Question) <> DialogResult.Yes) Then
+            Return
+        End If
 
-                Using mStream As New IO.MemoryStream()
-                    mNewImage.Save(mStream, Imaging.ImageFormat.Jpeg)
-                    mStream.Position = 0
+        For i = 0 To sFiles.Length - 1
+            If (sFiles(i).StartsWith("hash_cache")) Then
+                Continue For
+            End If
 
-                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageBPreview.Tag = sFile
-                End Using
+            If (Not IO.File.Exists(sFiles(i))) Then
+                Continue For
+            End If
 
-            Case (TypeOf mImage Is ImageMagick.MagickImage)
-                Dim mNewImage = DirectCast(mImage, ImageMagick.MagickImage)
-
-                Using mStream As New IO.MemoryStream()
-                    mNewImage.Write(mStream, ImageMagick.MagickFormat.Jpg)
-                    mStream.Position = 0
-
-                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageBPreview.Tag = sFile
-                End Using
-        End Select
+            IO.File.Delete(sFiles(i))
+        Next
     End Sub
 
     Private Sub Button_Select_Click(sender As Object, e As EventArgs) Handles Button_Select.Click
@@ -231,7 +316,6 @@
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
-
 
     Private Sub ToolStripMenuItem_Open_Click(sender As Object, e As EventArgs) Handles ToolStripMenuItem_Open.Click
         Try
@@ -322,6 +406,105 @@
         End Try
     End Sub
 
+    Public Sub SetPreviewImageA(mImage As Object, sFile As String)
+        If (PictureBox_ImageAPreview.Image IsNot Nothing) Then
+            PictureBox_ImageAPreview.Image.Dispose()
+
+            PictureBox_ImageAPreview.Image = Nothing
+            PictureBox_ImageAPreview.Tag = Nothing
+        End If
+
+        If (mImage Is Nothing) Then
+            Return
+        End If
+
+        Select Case (True)
+            Case (TypeOf mImage Is Image)
+                Dim mNewImage = DirectCast(mImage, Image)
+
+                Using mStream As New IO.MemoryStream()
+                    mNewImage.Save(mStream, Imaging.ImageFormat.Jpeg)
+                    mStream.Position = 0
+
+                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageAPreview.Tag = sFile
+                End Using
+
+            Case (TypeOf mImage Is ImageMagick.MagickImage)
+                Dim mNewImage = DirectCast(mImage, ImageMagick.MagickImage)
+
+                Using mStream As New IO.MemoryStream()
+                    mNewImage.Write(mStream, ImageMagick.MagickFormat.Jpg)
+                    mStream.Position = 0
+
+                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageAPreview.Tag = sFile
+                End Using
+
+            Case (TypeOf mImage Is SkiaSharp.SKBitmap)
+                Dim mNewImage = DirectCast(mImage, SkiaSharp.SKBitmap)
+
+                Using mStream As New IO.MemoryStream()
+                    Dim mData = mNewImage.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 95)
+                    mData.SaveTo(mStream)
+
+                    mStream.Position = 0
+
+                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageAPreview.Tag = sFile
+                End Using
+        End Select
+    End Sub
+
+    Public Sub SetPreviewImageB(mImage As Object, sFile As String)
+        If (PictureBox_ImageBPreview.Image IsNot Nothing) Then
+            PictureBox_ImageBPreview.Image.Dispose()
+
+            PictureBox_ImageBPreview.Image = Nothing
+            PictureBox_ImageBPreview.Tag = Nothing
+        End If
+
+        If (mImage Is Nothing) Then
+            Return
+        End If
+
+        Select Case (True)
+            Case (TypeOf mImage Is Image)
+                Dim mNewImage = DirectCast(mImage, Image)
+
+                Using mStream As New IO.MemoryStream()
+                    mNewImage.Save(mStream, Imaging.ImageFormat.Jpeg)
+                    mStream.Position = 0
+
+                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageBPreview.Tag = sFile
+                End Using
+
+            Case (TypeOf mImage Is ImageMagick.MagickImage)
+                Dim mNewImage = DirectCast(mImage, ImageMagick.MagickImage)
+
+                Using mStream As New IO.MemoryStream()
+                    mNewImage.Write(mStream, ImageMagick.MagickFormat.Jpg)
+                    mStream.Position = 0
+
+                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageBPreview.Tag = sFile
+                End Using
+
+            Case (TypeOf mImage Is SkiaSharp.SKBitmap)
+                Dim mNewImage = DirectCast(mImage, SkiaSharp.SKBitmap)
+
+                Using mStream As New IO.MemoryStream()
+                    Dim mData = mNewImage.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 95)
+                    mData.SaveTo(mStream)
+
+                    mStream.Position = 0
+
+                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
+                    PictureBox_ImageBPreview.Tag = sFile
+                End Using
+        End Select
+    End Sub
 
     Class ClassScanner
         Private g_fFormMain As FormMain
@@ -648,6 +831,7 @@
                                                 Dim mRootFileItem = mFileItem.Value.Values(0)
 
                                                 Dim mRootTreeNode As New TreeNode(" > ")
+                                                mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
                                                 mRootTreeNode.NodeFont = New Font(g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Font, FontStyle.Bold)
                                                 mRootTreeNode.Tag = New String() {
                                                     mRootFileItem.sFile,
@@ -1380,105 +1564,21 @@
         End Function
     End Class
 
-    Structure STRUC_IMAGE_INFO
-        Dim sFile As String
-        Dim iDifference As Double
-        Dim iFileSize As Double
-
-        Sub New(_File As String, _Difference As Double, _FileSize As Double)
-            sFile = _File
-            iDifference = _Difference
-            iFileSize = _FileSize
-        End Sub
-    End Structure
-
-    Private Sub TreeView_AfterNode(sender As Object, e As TreeViewEventArgs)
-        Try
-            Dim mFileNode = e.Node
-            Dim mParentFileNode = mFileNode.Parent
-
-            If (mFileNode Is Nothing) Then
-                Return
-            End If
-
-            Dim sFileA As String = Nothing
-            Dim sFileB As String = Nothing
-
-            If (mFileNode IsNot Nothing) Then
-                If (mParentFileNode Is Nothing) Then
-                    sFileA = DirectCast(mFileNode.Tag, String())(0)
-                    sFileB = Nothing
-                Else
-                    sFileB = DirectCast(mFileNode.Tag, String())(0)
-                    sFileA = DirectCast(mParentFileNode.Tag, String())(0)
-                End If
-            End If
-
-            If (sFileA IsNot Nothing) Then
-                If (IO.File.Exists(sFileA)) Then
-                    Try
-                        Using i As New Bitmap(sFileA)
-                            SetPreviewImageA(i, sFileA)
-                        End Using
-                    Catch ex As Exception
-                        Try
-                            ' Unsupported image, try Magick
-                            Using i As New ImageMagick.MagickImage(sFileA)
-                                SetPreviewImageA(i, sFileA)
-                            End Using
-                        Catch ex2 As Exception
-                            SetPreviewImageA(Nothing, Nothing)
-                        End Try
-                    End Try
-                Else
-                    SetPreviewImageA(Nothing, Nothing)
-                End If
-            Else
-                SetPreviewImageA(Nothing, Nothing)
-            End If
-
-            If (sFileB IsNot Nothing) Then
-                If (IO.File.Exists(sFileB)) Then
-                    Try
-                        Using i As New Bitmap(sFileB)
-                            SetPreviewImageB(i, sFileB)
-                        End Using
-                    Catch ex As Exception
-                        Try
-                            ' Unsupported image, try Magick
-                            Using i As New ImageMagick.MagickImage(sFileB)
-                                SetPreviewImageB(i, sFileB)
-                            End Using
-                        Catch ex2 As Exception
-                            SetPreviewImageB(Nothing, Nothing)
-                        End Try
-                    End Try
-                Else
-                    SetPreviewImageB(Nothing, Nothing)
-                End If
-            Else
-                SetPreviewImageB(Nothing, Nothing)
-            End If
-
-        Catch ex As Exception
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
     Private Sub FormMain_FormClosed(sender As Object, e As FormClosedEventArgs) Handles Me.FormClosed
         CleanUp()
     End Sub
 
     Private Sub CleanUp()
         RemoveHandler ClassTreeViewColumns_Images.m_TreeView.AfterSelect, AddressOf TreeView_AfterNode
-
-        SetPreviewImageA(Nothing, Nothing)
-        SetPreviewImageB(Nothing, Nothing)
+        RemoveHandler ClassTreeViewColumns_Images.m_TreeView.MouseDoubleClick, AddressOf TreeView_MouseDoubleClick
 
         If (g_ClassScanner IsNot Nothing) Then
             g_ClassScanner.Abort()
             g_ClassScanner.Join()
             g_ClassScanner = Nothing
         End If
+
+        SetPreviewImageA(Nothing, Nothing)
+        SetPreviewImageB(Nothing, Nothing)
     End Sub
 End Class

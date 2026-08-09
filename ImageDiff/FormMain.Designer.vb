@@ -56,17 +56,18 @@ Partial Class FormMain
         Me.ColumnHeader7 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader1 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ColumnHeader3 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ToolTip1 = New System.Windows.Forms.ToolTip(Me.components)
+        Me.ToolTip_Info = New System.Windows.Forms.ToolTip(Me.components)
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.SplitContainer1 = New System.Windows.Forms.SplitContainer()
-        Me.ClassTreeViewColumns_Images = New ImageDiff.ClassTreeViewColumns()
         Me.SplitContainer2 = New System.Windows.Forms.SplitContainer()
         Me.GroupBox3 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageAPreview = New System.Windows.Forms.PictureBox()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageBPreview = New System.Windows.Forms.PictureBox()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
+        Me.LinkLabel_CacheClear = New System.Windows.Forms.LinkLabel()
+        Me.ClassTreeViewColumns_Images = New ImageDiff.ClassTreeViewColumns()
         Me.ClassListViewEx_FailedFiles = New ImageDiff.ClassListViewEx()
         Me.ColumnHeader11 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.GroupBox1.SuspendLayout()
@@ -106,6 +107,7 @@ Partial Class FormMain
         '
         Me.GroupBox1.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.GroupBox1.Controls.Add(Me.LinkLabel_CacheClear)
         Me.GroupBox1.Controls.Add(Me.CheckBox_Caching)
         Me.GroupBox1.Controls.Add(Me.ComboBox_HashingQuality)
         Me.GroupBox1.Controls.Add(Me.Label5)
@@ -136,7 +138,7 @@ Partial Class FormMain
         Me.CheckBox_Caching.Size = New System.Drawing.Size(105, 17)
         Me.CheckBox_Caching.TabIndex = 11
         Me.CheckBox_Caching.Text = "Use hash cache"
-        Me.ToolTip1.SetToolTip(Me.CheckBox_Caching, "When enabled, hashes will be saved and loaded when needed to speed up the hasing " &
+        Me.ToolTip_Info.SetToolTip(Me.CheckBox_Caching, "When enabled, hashes will be saved and loaded when needed to speed up the hasing " &
         "process.")
         Me.CheckBox_Caching.UseVisualStyleBackColor = True
         '
@@ -149,7 +151,7 @@ Partial Class FormMain
         Me.ComboBox_HashingQuality.Name = "ComboBox_HashingQuality"
         Me.ComboBox_HashingQuality.Size = New System.Drawing.Size(128, 21)
         Me.ComboBox_HashingQuality.TabIndex = 10
-        Me.ToolTip1.SetToolTip(Me.ComboBox_HashingQuality, "Higher quality image processing will slow down processing speed.")
+        Me.ToolTip_Info.SetToolTip(Me.ComboBox_HashingQuality, "Higher quality image processing will slow down processing speed.")
         '
         'Label5
         '
@@ -178,8 +180,7 @@ Partial Class FormMain
         Me.ComboBox_HashingMethod.Name = "ComboBox_HashingMethod"
         Me.ComboBox_HashingMethod.Size = New System.Drawing.Size(128, 21)
         Me.ComboBox_HashingMethod.TabIndex = 7
-        Me.ToolTip1.SetToolTip(Me.ComboBox_HashingMethod, "GDI uses default .NET Framework image processing with limited format support." & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & "Ma" &
-        "gick enables more image formats but is also slower than GDI.")
+        Me.ToolTip_Info.SetToolTip(Me.ComboBox_HashingMethod, resources.GetString("ComboBox_HashingMethod.ToolTip"))
         '
         'Label3
         '
@@ -198,9 +199,9 @@ Partial Class FormMain
         Me.ComboBox_HashingSize.Name = "ComboBox_HashingSize"
         Me.ComboBox_HashingSize.Size = New System.Drawing.Size(128, 21)
         Me.ComboBox_HashingSize.TabIndex = 5
-        Me.ToolTip1.SetToolTip(Me.ComboBox_HashingSize, "Image comparing size in pixels." & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & "Smaller image sizes speed up processing but does" &
-        " not detect smaller details in the image and could also result in false positive" &
-        "s.")
+        Me.ToolTip_Info.SetToolTip(Me.ComboBox_HashingSize, "Image comparing size in pixels." & Global.Microsoft.VisualBasic.ChrW(13) & Global.Microsoft.VisualBasic.ChrW(10) & "Smaller image sizes can speed up processing but " &
+        "does not detect smaller details in the image and could also result in false posi" &
+        "tives.")
         '
         'CheckBox_CheckSubDirectorys
         '
@@ -211,7 +212,7 @@ Partial Class FormMain
         Me.CheckBox_CheckSubDirectorys.Size = New System.Drawing.Size(87, 17)
         Me.CheckBox_CheckSubDirectorys.TabIndex = 4
         Me.CheckBox_CheckSubDirectorys.Text = "Sub Folders"
-        Me.ToolTip1.SetToolTip(Me.CheckBox_CheckSubDirectorys, "Search images in sub folders when enabled.")
+        Me.ToolTip_Info.SetToolTip(Me.CheckBox_CheckSubDirectorys, "Search images in sub folders when enabled.")
         Me.CheckBox_CheckSubDirectorys.UseVisualStyleBackColor = True
         '
         'NumericUpDown_Threads
@@ -221,7 +222,7 @@ Partial Class FormMain
         Me.NumericUpDown_Threads.Name = "NumericUpDown_Threads"
         Me.NumericUpDown_Threads.Size = New System.Drawing.Size(66, 22)
         Me.NumericUpDown_Threads.TabIndex = 3
-        Me.ToolTip1.SetToolTip(Me.NumericUpDown_Threads, "How many processing threads will be used.")
+        Me.ToolTip_Info.SetToolTip(Me.NumericUpDown_Threads, "How many processing threads will be used.")
         Me.NumericUpDown_Threads.Value = New Decimal(New Integer() {4, 0, 0, 0})
         '
         'Label2
@@ -240,7 +241,7 @@ Partial Class FormMain
         Me.NumericUpDown_MaxImageDiff.Name = "NumericUpDown_MaxImageDiff"
         Me.NumericUpDown_MaxImageDiff.Size = New System.Drawing.Size(66, 22)
         Me.NumericUpDown_MaxImageDiff.TabIndex = 1
-        Me.ToolTip1.SetToolTip(Me.NumericUpDown_MaxImageDiff, "Average difference between images in percent.")
+        Me.ToolTip_Info.SetToolTip(Me.NumericUpDown_MaxImageDiff, "Average difference between images in percent.")
         Me.NumericUpDown_MaxImageDiff.Value = New Decimal(New Integer() {95, 0, 0, 0})
         '
         'TextBox_Path
@@ -342,6 +343,12 @@ Partial Class FormMain
         '
         Me.ColumnHeader3.Text = "Size B"
         '
+        'ToolTip_Info
+        '
+        Me.ToolTip_Info.AutoPopDelay = 30000
+        Me.ToolTip_Info.InitialDelay = 500
+        Me.ToolTip_Info.ReshowDelay = 100
+        '
         'TabControl1
         '
         Me.TabControl1.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
@@ -381,17 +388,6 @@ Partial Class FormMain
         Me.SplitContainer1.Size = New System.Drawing.Size(752, 460)
         Me.SplitContainer1.SplitterDistance = 486
         Me.SplitContainer1.TabIndex = 4
-        '
-        'ClassTreeViewColumns_Images
-        '
-        Me.ClassTreeViewColumns_Images.AutoScroll = True
-        Me.ClassTreeViewColumns_Images.BackColor = System.Drawing.SystemColors.Window
-        Me.ClassTreeViewColumns_Images.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.ClassTreeViewColumns_Images.Location = New System.Drawing.Point(0, 0)
-        Me.ClassTreeViewColumns_Images.m_GridView = True
-        Me.ClassTreeViewColumns_Images.Name = "ClassTreeViewColumns_Images"
-        Me.ClassTreeViewColumns_Images.Size = New System.Drawing.Size(486, 460)
-        Me.ClassTreeViewColumns_Images.TabIndex = 0
         '
         'SplitContainer2
         '
@@ -464,6 +460,32 @@ Partial Class FormMain
         Me.TabPage2.TabIndex = 1
         Me.TabPage2.Text = "Unsupported images"
         Me.TabPage2.UseVisualStyleBackColor = True
+        '
+        'LinkLabel_CacheClear
+        '
+        Me.LinkLabel_CacheClear.ActiveLinkColor = System.Drawing.SystemColors.HotTrack
+        Me.LinkLabel_CacheClear.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.LinkLabel_CacheClear.AutoSize = True
+        Me.LinkLabel_CacheClear.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline
+        Me.LinkLabel_CacheClear.LinkColor = System.Drawing.SystemColors.HotTrack
+        Me.LinkLabel_CacheClear.Location = New System.Drawing.Point(576, 105)
+        Me.LinkLabel_CacheClear.Name = "LinkLabel_CacheClear"
+        Me.LinkLabel_CacheClear.Size = New System.Drawing.Size(67, 13)
+        Me.LinkLabel_CacheClear.TabIndex = 12
+        Me.LinkLabel_CacheClear.TabStop = True
+        Me.LinkLabel_CacheClear.Text = "Clear Cache"
+        Me.LinkLabel_CacheClear.VisitedLinkColor = System.Drawing.SystemColors.HotTrack
+        '
+        'ClassTreeViewColumns_Images
+        '
+        Me.ClassTreeViewColumns_Images.AutoScroll = True
+        Me.ClassTreeViewColumns_Images.BackColor = System.Drawing.SystemColors.Window
+        Me.ClassTreeViewColumns_Images.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ClassTreeViewColumns_Images.Location = New System.Drawing.Point(0, 0)
+        Me.ClassTreeViewColumns_Images.m_GridView = True
+        Me.ClassTreeViewColumns_Images.Name = "ClassTreeViewColumns_Images"
+        Me.ClassTreeViewColumns_Images.Size = New System.Drawing.Size(486, 460)
+        Me.ClassTreeViewColumns_Images.TabIndex = 0
         '
         'ClassListViewEx_FailedFiles
         '
@@ -559,11 +581,12 @@ Partial Class FormMain
     Friend WithEvents ComboBox_HashingQuality As ComboBox
     Friend WithEvents Label5 As Label
     Friend WithEvents CheckBox_Caching As CheckBox
-    Friend WithEvents ToolTip1 As ToolTip
+    Friend WithEvents ToolTip_Info As ToolTip
     Friend WithEvents TabControl1 As TabControl
     Friend WithEvents TabPage1 As TabPage
     Friend WithEvents TabPage2 As TabPage
     Friend WithEvents ClassListViewEx_FailedFiles As ClassListViewEx
     Friend WithEvents ColumnHeader11 As ColumnHeader
     Friend WithEvents ClassTreeViewColumns_Images As ClassTreeViewColumns
+    Friend WithEvents LinkLabel_CacheClear As LinkLabel
 End Class

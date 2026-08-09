@@ -74,7 +74,7 @@
                 e.Graphics.FillRectangle(SystemBrushes.Control, mRect)
             End If
         Else
-            e.Graphics.FillRectangle(New SolidBrush(TreeView1.BackColor), mRect)
+            e.Graphics.FillRectangle(New SolidBrush(e.Node.BackColor), mRect)
         End If
 
         If (m_GridView) Then
