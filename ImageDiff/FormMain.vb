@@ -772,86 +772,94 @@
         End Sub
 
         Public Function CalculatePerceptualHash(sFile As String, Optional ByVal iThumbSize As UInteger = 8) As Byte()
-            Using mImage As New ImageMagick.MagickImage(sFile)
-                Return CalculatePerceptualHash(mImage, iThumbSize)
+            Using mThumbImage As New ImageMagick.MagickImage(sFile)
+                Return CalculatePerceptualHashInternal(mThumbImage, iThumbSize)
             End Using
         End Function
 
         Public Function CalculatePerceptualHash(mImage As ImageMagick.MagickImage, Optional ByVal iThumbSize As UInteger = 8) As Byte()
             Using mThumbImage As New ImageMagick.MagickImage(mImage)
-                Dim mThumbGeo As New ImageMagick.MagickGeometry(iThumbSize, iThumbSize)
-                mThumbGeo.IgnoreAspectRatio = True
-
-                If (m_HighQualityHashing) Then
-                    mThumbImage.Resize(mThumbGeo, ImageMagick.FilterType.Lanczos)
-                Else
-                    mThumbImage.Resize(mThumbGeo, ImageMagick.FilterType.Triangle)
-                End If
-
-                mThumbImage.Grayscale(ImageMagick.PixelIntensityMethod.Average)
-
-                Dim mPixels = mThumbImage.GetPixels()
-
-                Dim mPixelVal As New List(Of UShort)()
-
-                ' Iterate through all pixels
-                For y As Integer = 0 To CInt(mThumbImage.Height - 1)
-                    For x As Integer = 0 To CInt(mThumbImage.Width - 1)
-                        Dim pixel = mPixels.GetPixel(x, y)
-                        mPixelVal.Add(pixel.GetChannel(0))
-                    Next
-                Next
-
-                Dim iTotal As ULong = 0
-                For Each i As UShort In mPixelVal
-                    iTotal += i
-                Next
-                Dim iAverage As Double = iTotal / mPixelVal.Count
-
-                Dim iHashBits(CInt(iThumbSize * iThumbSize) - 1) As Byte
-                Dim iHashBitCount As Integer = 0
-
-                For Each mVal As UShort In mPixelVal
-                    If (mVal >= iAverage) Then
-                        iHashBits(iHashBitCount) = 1
-                        iHashBitCount += 1
-                    Else
-                        iHashBits(iHashBitCount) = 0
-                        iHashBitCount += 1
-                    End If
-                Next
-
-                Return iHashBits
+                Return CalculatePerceptualHashInternal(mThumbImage, iThumbSize)
             End Using
+        End Function
+
+        Private Function CalculatePerceptualHashInternal(mThumbImage As ImageMagick.MagickImage, Optional ByVal iThumbSize As UInteger = 8) As Byte()
+            Dim mThumbGeo As New ImageMagick.MagickGeometry(iThumbSize, iThumbSize)
+            mThumbGeo.IgnoreAspectRatio = True
+
+            If (m_HighQualityHashing) Then
+                mThumbImage.Resize(mThumbGeo, ImageMagick.FilterType.Lanczos)
+            Else
+                mThumbImage.Resize(mThumbGeo, ImageMagick.FilterType.Triangle)
+            End If
+
+            mThumbImage.Grayscale(ImageMagick.PixelIntensityMethod.Average)
+
+            Dim mPixels = mThumbImage.GetPixels()
+
+            Dim mPixelVal As New List(Of UShort)()
+
+            ' Iterate through all pixels
+            For y As Integer = 0 To CInt(mThumbImage.Height - 1)
+                For x As Integer = 0 To CInt(mThumbImage.Width - 1)
+                    Dim pixel = mPixels.GetPixel(x, y)
+                    mPixelVal.Add(pixel.GetChannel(0))
+                Next
+            Next
+
+            Dim iTotal As ULong = 0
+            For Each i As UShort In mPixelVal
+                iTotal += i
+            Next
+            Dim iAverage As Double = iTotal / mPixelVal.Count
+
+            Dim iHashBits(CInt(iThumbSize * iThumbSize) - 1) As Byte
+            Dim iHashBitCount As Integer = 0
+
+            For Each mVal As UShort In mPixelVal
+                If (mVal >= iAverage) Then
+                    iHashBits(iHashBitCount) = 1
+                    iHashBitCount += 1
+                Else
+                    iHashBits(iHashBitCount) = 0
+                    iHashBitCount += 1
+                End If
+            Next
+
+            Return iHashBits
         End Function
 
         Public Function CalculateAverageHash(sFile As String, Optional ByVal iThumbSize As UInteger = 8) As Byte()
             Using mImage As Image = Image.FromFile(sFile)
-                Return CalculateAverageHash(mImage, iThumbSize)
+                Return CalculateAverageHashInternal(mImage, iThumbSize)
             End Using
         End Function
 
         Public Function CalculateAverageHash(mImage As Image, Optional ByVal iThumbSize As UInteger = 8) As Byte()
-            Using mThumb As New Bitmap(CInt(iThumbSize), CInt(iThumbSize))
-                Using mG As Graphics = Graphics.FromImage(mThumb)
+            Return CalculateAverageHashInternal(mImage, iThumbSize)
+        End Function
+
+        Private Function CalculateAverageHashInternal(mThumbImage As Image, Optional ByVal iThumbSize As UInteger = 8) As Byte()
+            Using mThumbBitmap As New Bitmap(CInt(iThumbSize), CInt(iThumbSize))
+                Using mG As Graphics = Graphics.FromImage(mThumbBitmap)
                     SyncLock g_mThreadLock
                         If (m_HighQualityHashing) Then
                             mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear
                         Else
                             mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.HighQualityBicubic
                         End If
-                        mG.DrawImage(mImage, 0, 0, iThumbSize, iThumbSize)
+                        mG.DrawImage(mThumbImage, 0, 0, iThumbSize, iThumbSize)
                     End SyncLock
                 End Using
 
-                Dim iAvgBrightness As Double = GetAverageBrightness(mThumb)
+                Dim iAvgBrightness As Double = GetAverageBrightness(mThumbBitmap)
 
                 Dim iHashBits(CInt(iThumbSize * iThumbSize) - 1) As Byte
                 Dim iHashBitCount As Integer = 0
 
                 For iX As Integer = 0 To CInt(iThumbSize - 1)
                     For iY As Integer = 0 To CInt(iThumbSize - 1)
-                        Dim mPB As Color = mThumb.GetPixel(iY, iX)
+                        Dim mPB As Color = mThumbBitmap.GetPixel(iY, iX)
                         Dim iBB As Double = (CInt(mPB.R) + CInt(mPB.G) + CInt(mPB.B)) / 3.0
 
                         If (iBB >= iAvgBrightness) Then
