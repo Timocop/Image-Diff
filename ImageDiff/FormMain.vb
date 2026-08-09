@@ -1020,6 +1020,16 @@
                                 End If
 
                                 SyncLock g_mThreadLock
+                                    ' Skip if the pair already exists
+                                    If (mImageInfo.ContainsKey(sFileB) AndAlso mImageInfo(sFileB).ContainsKey(sFileA)) Then
+                                        Continue For
+                                    End If
+
+                                    ' Skip if the pair already exists
+                                    If (mImageInfo.ContainsKey(sFileA) AndAlso mImageInfo(sFileA).ContainsKey(sFileB)) Then
+                                        Continue For
+                                    End If
+
                                     If (Not mImageInfo.ContainsKey(sFileA)) Then
                                         mImageInfo(sFileA) = New Dictionary(Of String, STRUC_IMAGE_INFO)
                                         mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1, New IO.FileInfo(sFileA).Length)
