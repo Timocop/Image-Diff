@@ -8,6 +8,7 @@
     Enum ENUM_HASHING_METHOD
         GDI
         MAGICK
+        SKIA
 
         __MAX
     End Enum
@@ -37,7 +38,10 @@
                     Return ".NET GDI"
 
                 Case ENUM_HASHING_METHOD.MAGICK
-                    Return "Magick Lib"
+                    Return "Magick"
+
+                Case ENUM_HASHING_METHOD.SKIA
+                    Return "Skia"
             End Select
 
             Return "Unknown"
@@ -188,11 +192,6 @@
                 g_ClassScanner.Start()
             Else
                 g_ClassScanner.Abort()
-
-                ToolStripStatusLabel_Progress.Visible = False
-                ToolStripProgressBar_Progress.Visible = False
-
-                Button_Select.Text = "Select"
             End If
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -327,7 +326,7 @@
     Class ClassScanner
         Private g_fFormMain As FormMain
 
-        Private g_mScannerThread As Threading.Thread
+        Private g_mScannerThread As ClassThread
 
         Property m_Directory As String
         Property m_IncludeSubDirectories As Boolean
@@ -367,17 +366,19 @@
                 Return
             End If
 
-            g_mScannerThread = New Threading.Thread(AddressOf ScannerThread) With {
-                .IsBackground = True
-            }
+            g_mScannerThread = New ClassThread(AddressOf ThreadMainScanner, Nothing)
             g_mScannerThread.Start()
         End Sub
 
         Public Sub Abort()
             If (m_Scanning) Then
                 g_mScannerThread.Abort()
+            End If
+        End Sub
+
+        Public Sub Join()
+            If (m_Scanning) Then
                 g_mScannerThread.Join()
-                g_mScannerThread = Nothing
             End If
         End Sub
 
@@ -405,7 +406,63 @@
             End Set
         End Property
 
-        Private Sub ScannerThread()
+        Class ClassThread
+            Private g_mThread As Threading.Thread = Nothing
+            Private ReadOnly g_mCancelToken As New Threading.CancellationTokenSource
+
+            Public Delegate Sub ThreadAction(mCancelToken As Threading.CancellationTokenSource, mObject As Object)
+
+            Public Sub New(mThreadAction As ThreadAction, mObject As Object)
+                g_mThread = New Threading.Thread(Sub()
+                                                     Try
+                                                         mThreadAction.Invoke(g_mCancelToken, mObject)
+                                                     Catch ex As ThreadAbortException
+                                                     Catch ex As Exception
+                                                     End Try
+                                                 End Sub)
+                g_mThread.IsBackground = True
+            End Sub
+
+            Public Sub Start()
+                If (g_mThread Is Nothing) Then
+                    Return
+                End If
+
+                g_mThread.Start()
+            End Sub
+
+            Public Sub Abort()
+                If (g_mThread Is Nothing) Then
+                    Return
+                End If
+
+                g_mCancelToken.Cancel()
+            End Sub
+
+            Public Sub Join()
+                If (g_mThread Is Nothing) Then
+                    Return
+                End If
+
+                g_mCancelToken.Cancel()
+
+                g_mThread.Join()
+            End Sub
+
+            Public Function IsAlive() As Boolean
+                If (g_mThread Is Nothing) Then
+                    Return False
+                End If
+
+                Return g_mThread.IsAlive
+            End Function
+
+            Class ThreadAbortException
+                Inherits ArgumentException
+            End Class
+        End Class
+
+        Private Sub ThreadMainScanner(mCancelToken As Threading.CancellationTokenSource, mObject As Object)
             Try
                 Dim sDirectory As String = m_Directory
                 Dim bIncludeSubDirectories As Boolean = m_IncludeSubDirectories
@@ -427,7 +484,7 @@
 
                 Dim sFiles = IO.Directory.GetFiles(sDirectory, "*.*", If(bIncludeSubDirectories, IO.SearchOption.AllDirectories, IO.SearchOption.TopDirectoryOnly))
                 Dim mImageInfo As New Dictionary(Of String, Dictionary(Of String, STRUC_IMAGE_INFO))(StringComparison.InvariantCultureIgnoreCase)
-                Dim mThreads As New List(Of Threading.Thread)
+                Dim mThreads As New List(Of ClassThread)
                 Dim mFilesThreads As New Queue(Of String)
                 Dim mThreadInfo As New Dictionary(Of String, Object)
 
@@ -456,7 +513,7 @@
 
                                             SaveCache()
                                     End Select
-                                Catch ex As Threading.ThreadAbortException
+                                Catch ex As ClassThread.ThreadAbortException
                                     Throw
                                 Catch ex As Exception
                                     MessageBox.Show(ex.Message, "Unable to use save/load hash cache", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -483,16 +540,18 @@
                                 mData("HashingMethod") = iHashingMethod
                                 mData("ThumbSize") = iThumbSize
 
-                                Dim tThread As New Threading.Thread(AddressOf SubScanner) With {
-                                    .IsBackground = True
-                                }
-                                tThread.Start(mData)
+                                Dim mThread As New ClassThread(AddressOf ThreadSubScanner, mData)
+                                mThread.Start()
 
-                                mThreads.Add(tThread)
+                                mThreads.Add(mThread)
                             Next
 
                             Try
                                 While True
+                                    If (mCancelToken.IsCancellationRequested) Then
+                                        Throw New ClassThread.ThreadAbortException
+                                    End If
+
                                     Threading.Thread.Sleep(1000)
 
                                     Dim iFiles As Integer
@@ -530,7 +589,7 @@
 
                                     Exit While
                                 End While
-                            Catch ex As Threading.ThreadAbortException
+                            Catch ex As ClassThread.ThreadAbortException
                                 Throw
                             End Try
                         Next
@@ -642,7 +701,12 @@
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripProgressBar_Progress.Visible = False)
 
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.Button_Select.Text = "Select")
-            Catch ex As Threading.ThreadAbortException
+            Catch ex As ClassThread.ThreadAbortException
+                g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripStatusLabel_Progress.Visible = False)
+                g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripProgressBar_Progress.Visible = False)
+
+                g_fFormMain.BeginInvoke(Sub() g_fFormMain.Button_Select.Text = "Select")
+
                 Throw
             Catch ex As Exception
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -654,8 +718,8 @@
             End Try
         End Sub
 
-        Private Sub SubScanner(x As Object)
-            Dim mData = DirectCast(x, Dictionary(Of String, Object))
+        Private Sub ThreadSubScanner(mCancelToken As Threading.CancellationTokenSource, mObject As Object)
+            Dim mData = DirectCast(mObject, Dictionary(Of String, Object))
 
             Dim mFilesThreads = DirectCast(mData("FilesThreads"), Queue(Of String))
             Dim sTotalFiles = DirectCast(mData("TotalFiles"), String())
@@ -690,6 +754,10 @@
 
                     mTotalFilesList.Remove(sFileA)
 
+                    If (mCancelToken.IsCancellationRequested) Then
+                        Throw New ClassThread.ThreadAbortException
+                    End If
+
                     If (bIsPreHashing) Then
                         If (Not IO.File.Exists(sFileA)) Then
                             Continue While
@@ -707,6 +775,15 @@
 
                         Try
                             Select Case (iHashingMethod)
+                                Case ENUM_HASHING_METHOD.SKIA
+                                    Using i = SkiaSharp.SKBitmap.Decode(sFileA)
+                                        If (i Is Nothing) Then
+                                            Continue While
+                                        End If
+
+                                        ' Success
+                                    End Using
+
                                 Case ENUM_HASHING_METHOD.MAGICK
                                     Using mImage As New ImageMagick.MagickImage(sFileA)
                                         ' Success
@@ -717,17 +794,24 @@
                                         ' Success
                                     End Using
                             End Select
-                        Catch ex As Threading.ThreadAbortException
+                        Catch ex As ClassThread.ThreadAbortException
                             Throw
                         Catch ex As Exception
                             Continue While
                         End Try
 
                         Select Case (iHashingMethod)
+                            Case ENUM_HASHING_METHOD.SKIA
+                                Dim mHasher As New ClassHasherSkia
+                                m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
+
                             Case ENUM_HASHING_METHOD.MAGICK
-                                m_HashCache(sFileA) = CalculatePerceptualHash(sFileA, CUInt(iThumbSize))
+                                Dim mHasher As New ClassHasherMagick
+                                m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
+
                             Case Else
-                                m_HashCache(sFileA) = CalculateAverageHash(sFileA, CUInt(iThumbSize))
+                                Dim mHasher As New ClassHasherGdi
+                                m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
                         End Select
                     Else
                         Dim sHashA As Byte() = m_HashCache(sFileA)
@@ -737,6 +821,10 @@
 
                         For Each sFileB As String In mTotalFilesList
                             Try
+                                If (mCancelToken.IsCancellationRequested) Then
+                                    Throw New ClassThread.ThreadAbortException
+                                End If
+
                                 Dim sHashB As Byte() = m_HashCache(sFileB)
                                 If (sHashB.Length = 0) Then
                                     Continue For
@@ -756,14 +844,14 @@
                                     mImageInfo(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length)
                                 End SyncLock
 
-                            Catch ex As Threading.ThreadAbortException
+                            Catch ex As ClassThread.ThreadAbortException
                                 Throw
                             Catch ex As Exception
                                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
                             End Try
                         Next
                     End If
-                Catch ex As Threading.ThreadAbortException
+                Catch ex As ClassThread.ThreadAbortException
                     Throw
                 Catch ex As Exception
                     MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -771,122 +859,234 @@
             End While
         End Sub
 
-        Public Function CalculatePerceptualHash(sFile As String, Optional ByVal iThumbSize As UInteger = 8) As Byte()
-            Using mThumbImage As New ImageMagick.MagickImage(sFile)
-                Return CalculatePerceptualHashInternal(mThumbImage, iThumbSize)
-            End Using
-        End Function
+        Interface IImageHasher(Of T)
+            Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
+            Function GetHash(mImage As T, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
+        End Interface
 
-        Public Function CalculatePerceptualHash(mImage As ImageMagick.MagickImage, Optional ByVal iThumbSize As UInteger = 8) As Byte()
-            Using mThumbImage As New ImageMagick.MagickImage(mImage)
-                Return CalculatePerceptualHashInternal(mThumbImage, iThumbSize)
-            End Using
-        End Function
+        Class ClassHasherSkia
+            Implements IImageHasher(Of SkiaSharp.SKBitmap)
 
-        Private Function CalculatePerceptualHashInternal(mThumbImage As ImageMagick.MagickImage, Optional ByVal iThumbSize As UInteger = 8) As Byte()
-            Dim mThumbGeo As New ImageMagick.MagickGeometry(iThumbSize, iThumbSize)
-            mThumbGeo.IgnoreAspectRatio = True
-
-            If (m_HighQualityHashing) Then
-                mThumbImage.Resize(mThumbGeo, ImageMagick.FilterType.Lanczos)
-            Else
-                mThumbImage.Resize(mThumbGeo, ImageMagick.FilterType.Triangle)
-            End If
-
-            mThumbImage.Grayscale(ImageMagick.PixelIntensityMethod.Average)
-
-            Dim mPixels = mThumbImage.GetPixels()
-
-            Dim mPixelVal As New List(Of UShort)()
-
-            ' Iterate through all pixels
-            For y As Integer = 0 To CInt(mThumbImage.Height - 1)
-                For x As Integer = 0 To CInt(mThumbImage.Width - 1)
-                    Dim pixel = mPixels.GetPixel(x, y)
-                    mPixelVal.Add(pixel.GetChannel(0))
-                Next
-            Next
-
-            Dim iTotal As ULong = 0
-            For Each i As UShort In mPixelVal
-                iTotal += i
-            Next
-            Dim iAverage As Double = iTotal / mPixelVal.Count
-
-            Dim iHashBits(CInt(iThumbSize * iThumbSize) - 1) As Byte
-            Dim iHashBitCount As Integer = 0
-
-            For Each mVal As UShort In mPixelVal
-                If (mVal >= iAverage) Then
-                    iHashBits(iHashBitCount) = 1
-                    iHashBitCount += 1
-                Else
-                    iHashBits(iHashBitCount) = 0
-                    iHashBitCount += 1
-                End If
-            Next
-
-            Return iHashBits
-        End Function
-
-        Public Function CalculateAverageHash(sFile As String, Optional ByVal iThumbSize As UInteger = 8) As Byte()
-            Using mImage As Image = Image.FromFile(sFile)
-                Return CalculateAverageHashInternal(mImage, iThumbSize)
-            End Using
-        End Function
-
-        Public Function CalculateAverageHash(mImage As Image, Optional ByVal iThumbSize As UInteger = 8) As Byte()
-            Return CalculateAverageHashInternal(mImage, iThumbSize)
-        End Function
-
-        Private Function CalculateAverageHashInternal(mThumbImage As Image, Optional ByVal iThumbSize As UInteger = 8) As Byte()
-            Using mThumbBitmap As New Bitmap(CInt(iThumbSize), CInt(iThumbSize))
-                Using mG As Graphics = Graphics.FromImage(mThumbBitmap)
-                    SyncLock g_mThreadLock
-                        If (m_HighQualityHashing) Then
-                            mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear
-                        Else
-                            mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.HighQualityBicubic
-                        End If
-                        mG.DrawImage(mThumbImage, 0, 0, iThumbSize, iThumbSize)
-                    End SyncLock
+            Public Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of SkiaSharp.SKBitmap).GetHash
+                Using mThumbImage = SkiaSharp.SKBitmap.Decode(sFile)
+                    Return CalculateHashInternal(mThumbImage, iThumbSize, bHighQuality)
                 End Using
+            End Function
 
-                Dim iAvgBrightness As Double = GetAverageBrightness(mThumbBitmap)
+            Public Function GetHash(mImage As SkiaSharp.SKBitmap, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of SkiaSharp.SKBitmap).GetHash
+                Return CalculateHashInternal(mImage, iThumbSize, bHighQuality)
+            End Function
 
-                Dim iHashBits(CInt(iThumbSize * iThumbSize) - 1) As Byte
-                Dim iHashBitCount As Integer = 0
+            Private Function CalculateHashInternal(mThumbImage As SkiaSharp.SKBitmap, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
+                Dim mResizedThumb As SkiaSharp.SKBitmap = Nothing
+                Try
+                    If (bHighQuality) Then
+                        mResizedThumb = ResizeImage(mThumbImage, iThumbSize, iThumbSize, bHighQuality)
+                    Else
+                        mResizedThumb = ResizeImage(mThumbImage, iThumbSize, iThumbSize, bHighQuality)
+                    End If
 
-                For iX As Integer = 0 To CInt(iThumbSize - 1)
-                    For iY As Integer = 0 To CInt(iThumbSize - 1)
-                        Dim mPB As Color = mThumbBitmap.GetPixel(iY, iX)
-                        Dim iBB As Double = (CInt(mPB.R) + CInt(mPB.G) + CInt(mPB.B)) / 3.0
+                    Using mGrayImage = ConvertToGrayscale(mResizedThumb, bHighQuality)
+                        Dim mPixelVal As New List(Of Byte)()
+                        For y As Integer = 0 To mGrayImage.Height - 1
+                            For x As Integer = 0 To mGrayImage.Width - 1
+                                Dim mPixel = mGrayImage.GetPixel(x, y)
+                                mPixelVal.Add(mPixel.Red)
+                            Next
+                        Next
 
-                        If (iBB >= iAvgBrightness) Then
-                            iHashBits(iHashBitCount) = 1
-                            iHashBitCount += 1
-                        Else
-                            iHashBits(iHashBitCount) = 0
-                            iHashBitCount += 1
-                        End If
+                        Dim iTotal As ULong = 0
+                        For Each i As Byte In mPixelVal
+                            iTotal += i
+                        Next
+                        Dim iAvg As Double = (iTotal / mPixelVal.Count)
+
+                        Dim iHash(mPixelVal.Count - 1) As Byte
+                        For i = 0 To mPixelVal.Count - 1
+                            If (mPixelVal(i) >= iAvg) Then
+                                iHash(i) = 1
+                            Else
+                                iHash(i) = 0
+                            End If
+                        Next
+
+                        Return iHash
+                    End Using
+                Finally
+                    If (mResizedThumb IsNot Nothing AndAlso mResizedThumb IsNot mThumbImage) Then
+                        mResizedThumb.Dispose()
+                    End If
+                End Try
+            End Function
+            Private Function ResizeImage(mSource As SkiaSharp.SKBitmap, iWidth As UInteger, iHeight As UInteger, bHighQuality As Boolean) As SkiaSharp.SKBitmap
+                Dim mSampling As SkiaSharp.SKSamplingOptions
+
+                If (bHighQuality) Then
+                    mSampling = New SkiaSharp.SKSamplingOptions(SkiaSharp.SKCubicResampler.Mitchell)
+                Else
+                    mSampling = New SkiaSharp.SKSamplingOptions(SkiaSharp.SKFilterMode.Linear)
+                End If
+
+                Dim mDest As New SkiaSharp.SKBitmap(CInt(iWidth), CInt(iHeight))
+                Using mSurface As New SkiaSharp.SKCanvas(mDest)
+                    mSurface.DrawBitmap(
+                        mSource,
+                        New SkiaSharp.SKRect(0, 0, iWidth, iHeight),
+                        mSampling
+                    )
+                End Using
+                Return mDest
+            End Function
+
+            Private Function ConvertToGrayscale(mSource As SkiaSharp.SKBitmap, bHighQuality As Boolean) As SkiaSharp.SKBitmap
+                Dim mSampling As SkiaSharp.SKSamplingOptions
+
+                If (bHighQuality) Then
+                    mSampling = New SkiaSharp.SKSamplingOptions(SkiaSharp.SKCubicResampler.Mitchell)
+                Else
+                    mSampling = New SkiaSharp.SKSamplingOptions(SkiaSharp.SKFilterMode.Linear)
+                End If
+
+                Dim mDest As New SkiaSharp.SKBitmap(mSource.Width, mSource.Height)
+                Using mCanvas As New SkiaSharp.SKCanvas(mDest)
+                    Using mColorFilter As SkiaSharp.SKColorFilter = SkiaSharp.SKColorFilter.CreateColorMatrix(New Single() {
+                            0.333F, 0.333F, 0.333F, 0, 0,   ' Red channel
+                            0.333F, 0.333F, 0.333F, 0, 0,   ' Green channel  
+                            0.333F, 0.333F, 0.333F, 0, 0,   ' Blue channel
+                            0, 0, 0, 1, 0                    ' Alpha channel
+                        })
+                        Using paint As New SkiaSharp.SKPaint()
+                            paint.ColorFilter = mColorFilter
+
+                            mCanvas.DrawBitmap(mSource, 0, 0, mSampling, paint)
+                        End Using
+                    End Using
+                End Using
+                Return mDest
+            End Function
+
+        End Class
+
+        Class ClassHasherMagick
+            Implements IImageHasher(Of ImageMagick.MagickImage)
+
+            Public Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of ImageMagick.MagickImage).GetHash
+                Using mThumbImage As New ImageMagick.MagickImage(sFile)
+                    Return CalculateHashInternal(mThumbImage, iThumbSize, bHighQuality)
+                End Using
+            End Function
+
+            Public Function GetHash(mImage As ImageMagick.MagickImage, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of ImageMagick.MagickImage).GetHash
+                Using mThumbImage As New ImageMagick.MagickImage(mImage)
+                    Return CalculateHashInternal(mThumbImage, iThumbSize, bHighQuality)
+                End Using
+            End Function
+
+            Private Function CalculateHashInternal(mThumbImage As ImageMagick.MagickImage, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
+                Dim mThumbGeo As New ImageMagick.MagickGeometry(iThumbSize, iThumbSize)
+                mThumbGeo.IgnoreAspectRatio = True
+
+                If (bHighQuality) Then
+                    mThumbImage.Resize(mThumbGeo, ImageMagick.FilterType.Lanczos)
+                Else
+                    mThumbImage.Resize(mThumbGeo, ImageMagick.FilterType.Triangle)
+                End If
+
+                mThumbImage.Grayscale(ImageMagick.PixelIntensityMethod.Average)
+
+                Dim mPixels = mThumbImage.GetPixels()
+
+                Dim mPixelVal As New List(Of UShort)()
+
+                For y As Integer = 0 To CInt(mThumbImage.Height - 1)
+                    For x As Integer = 0 To CInt(mThumbImage.Width - 1)
+                        Dim pixel = mPixels.GetPixel(x, y)
+                        mPixelVal.Add(pixel.GetChannel(0))
                     Next
                 Next
 
-                Return iHashBits
-            End Using
-
-        End Function
-
-        Private Function GetAverageBrightness(mImage As Bitmap) As Double
-            Dim iTotal As Integer = 0
-            For iY As Integer = 0 To mImage.Height - 1
-                For iX As Integer = 0 To mImage.Width - 1
-                    Dim mColor As Color = mImage.GetPixel(iX, iY)
-                    iTotal += CInt((CInt(mColor.R) + CInt(mColor.G) + CInt(mColor.B)) / 3)
+                Dim iTotal As ULong = 0
+                For Each i As UShort In mPixelVal
+                    iTotal += i
                 Next
-            Next
-            Return iTotal / (mImage.Width * mImage.Height)
-        End Function
+                Dim iAverage As Double = iTotal / mPixelVal.Count
+
+                Dim iHashBits(mPixelVal.Count - 1) As Byte
+                For i = 0 To mPixelVal.Count - 1
+                    If (mPixelVal(i) >= iAverage) Then
+                        iHashBits(i) = 1
+                    Else
+                        iHashBits(i) = 0
+                    End If
+                Next
+
+                Return iHashBits
+            End Function
+        End Class
+
+        Class ClassHasherGdi
+            Implements IImageHasher(Of Image)
+
+            Private Shared g_mDrawingLock As New Object
+
+            Public Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Image).GetHash
+                Using mImage As Image = Image.FromFile(sFile)
+                    Return CalculateHashInternal(mImage, iThumbSize, bHighQuality)
+                End Using
+            End Function
+
+            Public Function GetHash(mImage As Image, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Image).GetHash
+                Return CalculateHashInternal(mImage, iThumbSize, bHighQuality)
+            End Function
+
+            Private Function CalculateHashInternal(mThumbImage As Image, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
+                Using mThumbBitmap As New Bitmap(CInt(iThumbSize), CInt(iThumbSize))
+                    Using mG As Graphics = Graphics.FromImage(mThumbBitmap)
+                        SyncLock g_mDrawingLock
+                            If (bHighQuality) Then
+                                mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear
+                            Else
+                                mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.HighQualityBicubic
+                            End If
+                            mG.DrawImage(mThumbImage, 0, 0, iThumbSize, iThumbSize)
+                        End SyncLock
+                    End Using
+
+                    Dim iAvgBrightness As Double = GetAverageBrightness(mThumbBitmap)
+
+                    Dim iHashBits(CInt(iThumbSize * iThumbSize) - 1) As Byte
+                    Dim iHashBitCount As Integer = 0
+
+                    For iX As Integer = 0 To CInt(iThumbSize - 1)
+                        For iY As Integer = 0 To CInt(iThumbSize - 1)
+                            Dim mPB As Color = mThumbBitmap.GetPixel(iY, iX)
+                            Dim iBB As Double = (CInt(mPB.R) + CInt(mPB.G) + CInt(mPB.B)) / 3.0
+
+                            If (iBB >= iAvgBrightness) Then
+                                iHashBits(iHashBitCount) = 1
+                                iHashBitCount += 1
+                            Else
+                                iHashBits(iHashBitCount) = 0
+                                iHashBitCount += 1
+                            End If
+                        Next
+                    Next
+
+                    Return iHashBits
+                End Using
+            End Function
+
+            Private Function GetAverageBrightness(mImage As Bitmap) As Double
+                Dim iTotal As Integer = 0
+                For iY As Integer = 0 To mImage.Height - 1
+                    For iX As Integer = 0 To mImage.Width - 1
+                        Dim mColor As Color = mImage.GetPixel(iX, iY)
+                        iTotal += CInt((CInt(mColor.R) + CInt(mColor.G) + CInt(mColor.B)) / 3)
+                    Next
+                Next
+                Return iTotal / (mImage.Width * mImage.Height)
+            End Function
+        End Class
 
         Private Function CalculateHashSimilarity(iHashA As Byte(), iHashB As Byte()) As Double
             If (iHashA.Length <> iHashB.Length) Then
@@ -1277,6 +1477,7 @@
 
         If (g_ClassScanner IsNot Nothing) Then
             g_ClassScanner.Abort()
+            g_ClassScanner.Join()
             g_ClassScanner = Nothing
         End If
     End Sub
