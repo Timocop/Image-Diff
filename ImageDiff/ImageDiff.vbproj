@@ -188,6 +188,9 @@
       <Link>LICENSE-MAGICK</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="..\LICENSE-SKIA">
+      <Link>LICENSE-SKIA</Link>
+    </None>
     <None Include="app.config" />
     <None Include="My Project\Application.myapp">
       <Generator>MyApplicationCodeGenerator</Generator>
