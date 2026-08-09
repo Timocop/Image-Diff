@@ -338,8 +338,9 @@
         Property m_HighQualityHashing As Boolean
         Property m_UseCaching As Boolean
 
-        Private g_mLock As New Object
+        Private g_mThreadLock As New Object
         Private g_mHashCache As New Dictionary(Of String, Byte())(StringComparer.InvariantCultureIgnoreCase)
+        Private g_mHashCacheLock As New Object
 
         Public Sub New(_FormMain As FormMain,
                        _Directory As String,
@@ -388,17 +389,17 @@
 
         Private Property m_HashCache(sFile As String) As Byte()
             Get
-                SyncLock g_mLock
+                SyncLock g_mHashCacheLock
                     Dim i = New Byte() {}
                     If (g_mHashCache.TryGetValue(sFile, i)) Then
                         Return i
                     Else
-                        Return Nothing
+                        Return {}
                     End If
                 End SyncLock
             End Get
             Set(value As Byte())
-                SyncLock g_mLock
+                SyncLock g_mHashCacheLock
                     g_mHashCache(sFile) = value
                 End SyncLock
             End Set
@@ -462,7 +463,7 @@
                                 End Try
                             End If
 
-                            SyncLock g_mLock
+                            SyncLock g_mThreadLock
                                 mThreadInfo("Files") = 0
                             End SyncLock
 
@@ -496,7 +497,7 @@
 
                                     Dim iFiles As Integer
 
-                                    SyncLock g_mLock
+                                    SyncLock g_mThreadLock
                                         iFiles = CInt(mThreadInfo("Files"))
                                     End SyncLock
 
@@ -549,7 +550,7 @@
                 ' Get failed files to display later
                 Dim mFailedFiles As New List(Of String)
                 For Each sFile As String In sFiles
-                    If (m_HashCache(sFile) IsNot Nothing) Then
+                    If (m_HashCache(sFile).Length > 0) Then
                         Continue For
                     End If
 
@@ -677,7 +678,7 @@
                 Try
                     Dim sFileA As String
 
-                    SyncLock g_mLock
+                    SyncLock g_mThreadLock
                         If (mFilesThreads.Count < 1) Then
                             Exit While
                         End If
@@ -695,7 +696,7 @@
                         End If
 
                         Dim sHashA As Byte() = m_HashCache(sFileA)
-                        If (sHashA IsNot Nothing) Then
+                        If (sHashA.Length > 0) Then
                             Continue While
                         End If
 
@@ -730,14 +731,14 @@
                         End Select
                     Else
                         Dim sHashA As Byte() = m_HashCache(sFileA)
-                        If (sHashA Is Nothing) Then
+                        If (sHashA.Length = 0) Then
                             Continue While
                         End If
 
                         For Each sFileB As String In mTotalFilesList
                             Try
                                 Dim sHashB As Byte() = m_HashCache(sFileB)
-                                If (sHashB Is Nothing) Then
+                                If (sHashB.Length = 0) Then
                                     Continue For
                                 End If
 
@@ -746,7 +747,7 @@
                                     Continue For
                                 End If
 
-                                SyncLock g_mLock
+                                SyncLock g_mThreadLock
                                     If (Not mImageInfo.ContainsKey(sFileA)) Then
                                         mImageInfo(sFileA) = New Dictionary(Of String, STRUC_IMAGE_INFO)
                                         mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1, New IO.FileInfo(sFileA).Length)
@@ -833,7 +834,7 @@
         Public Function CalculateAverageHash(mImage As Image, Optional ByVal iThumbSize As UInteger = 8) As Byte()
             Using mThumb As New Bitmap(CInt(iThumbSize), CInt(iThumbSize))
                 Using mG As Graphics = Graphics.FromImage(mThumb)
-                    SyncLock g_mLock
+                    SyncLock g_mThreadLock
                         If (m_HighQualityHashing) Then
                             mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear
                         Else
@@ -904,7 +905,7 @@
                 Return
             End If
 
-            SyncLock g_mLock
+            SyncLock g_mHashCacheLock
                 Using mStream As New IO.MemoryStream()
                     Using mBinWriter As New IO.BinaryReader(mStream)
                         Using mFileStream As New IO.FileStream(sCacheFile, IO.FileMode.Open, IO.FileAccess.Read)
@@ -992,7 +993,7 @@
             Dim bHighQualityHashing As Boolean = m_HighQualityHashing
             Dim sCacheFile As String = IO.Path.Combine(Application.StartupPath, String.Format("hash_cache_{0}_{1}_{2}.dat", iHashingMethod, iHashSize, If(bHighQualityHashing, 1, 0)))
 
-            SyncLock g_mLock
+            SyncLock g_mHashCacheLock
                 Using mStream As New IO.MemoryStream()
                     Using mBinReader As New IO.BinaryWriter(mStream)
                         Using mFileStream As New IO.FileStream(sCacheFile, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite)
