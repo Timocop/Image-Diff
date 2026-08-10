@@ -47,7 +47,7 @@
         Public Overrides Function ToString() As String
             Select Case (iMethod)
                 Case ENUM_HASHING_METHOD.GDI
-                    Return ".NET GDI"
+                    Return "GDI"
 
                 Case ENUM_HASHING_METHOD.MAGICK
                     Return "Magick"
@@ -93,7 +93,7 @@
         For i As Integer = 0 To ENUM_HASHING_METHOD.__MAX - 1
             ComboBox_HashingMethod.Items.Add(New STRUC_HASHING_METHOD_ITEM(CType(i, ENUM_HASHING_METHOD)))
         Next
-        ComboBox_HashingMethod.SelectedIndex = ENUM_HASHING_METHOD.GDI
+        ComboBox_HashingMethod.SelectedIndex = ENUM_HASHING_METHOD.SKIA
 
         ComboBox_HashingQuality.Items.Clear()
         ComboBox_HashingQuality.Items.Add("High Quality, Slow")
@@ -1238,9 +1238,9 @@
                     Using mG As Graphics = Graphics.FromImage(mThumbBitmap)
                         SyncLock g_mDrawingLock
                             If (bHighQuality) Then
-                                mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear
-                            Else
                                 mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.HighQualityBicubic
+                            Else
+                                mG.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear
                             End If
                             mG.DrawImage(mThumbImage, 0, 0, iThumbSize, iThumbSize)
                         End SyncLock

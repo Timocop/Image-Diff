@@ -30,6 +30,7 @@ Partial Class FormMain
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FormMain))
         Me.Button_Select = New System.Windows.Forms.Button()
         Me.GroupBox1 = New System.Windows.Forms.GroupBox()
+        Me.LinkLabel_CacheClear = New System.Windows.Forms.LinkLabel()
         Me.CheckBox_Caching = New System.Windows.Forms.CheckBox()
         Me.ComboBox_HashingQuality = New System.Windows.Forms.ComboBox()
         Me.Label5 = New System.Windows.Forms.Label()
@@ -66,7 +67,6 @@ Partial Class FormMain
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageBPreview = New System.Windows.Forms.PictureBox()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
-        Me.LinkLabel_CacheClear = New System.Windows.Forms.LinkLabel()
         Me.ClassTreeViewColumns_Images = New ImageDiff.ClassTreeViewColumns()
         Me.ClassListViewEx_FailedFiles = New ImageDiff.ClassListViewEx()
         Me.ColumnHeader11 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
@@ -128,6 +128,21 @@ Partial Class FormMain
         Me.GroupBox1.TabIndex = 1
         Me.GroupBox1.TabStop = False
         Me.GroupBox1.Text = "Image directory and settings"
+        '
+        'LinkLabel_CacheClear
+        '
+        Me.LinkLabel_CacheClear.ActiveLinkColor = System.Drawing.SystemColors.HotTrack
+        Me.LinkLabel_CacheClear.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.LinkLabel_CacheClear.AutoSize = True
+        Me.LinkLabel_CacheClear.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline
+        Me.LinkLabel_CacheClear.LinkColor = System.Drawing.SystemColors.HotTrack
+        Me.LinkLabel_CacheClear.Location = New System.Drawing.Point(576, 105)
+        Me.LinkLabel_CacheClear.Name = "LinkLabel_CacheClear"
+        Me.LinkLabel_CacheClear.Size = New System.Drawing.Size(67, 13)
+        Me.LinkLabel_CacheClear.TabIndex = 12
+        Me.LinkLabel_CacheClear.TabStop = True
+        Me.LinkLabel_CacheClear.Text = "Clear Cache"
+        Me.LinkLabel_CacheClear.VisitedLinkColor = System.Drawing.SystemColors.HotTrack
         '
         'CheckBox_Caching
         '
@@ -460,21 +475,6 @@ Partial Class FormMain
         Me.TabPage2.TabIndex = 1
         Me.TabPage2.Text = "Unsupported images"
         Me.TabPage2.UseVisualStyleBackColor = True
-        '
-        'LinkLabel_CacheClear
-        '
-        Me.LinkLabel_CacheClear.ActiveLinkColor = System.Drawing.SystemColors.HotTrack
-        Me.LinkLabel_CacheClear.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.LinkLabel_CacheClear.AutoSize = True
-        Me.LinkLabel_CacheClear.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline
-        Me.LinkLabel_CacheClear.LinkColor = System.Drawing.SystemColors.HotTrack
-        Me.LinkLabel_CacheClear.Location = New System.Drawing.Point(576, 105)
-        Me.LinkLabel_CacheClear.Name = "LinkLabel_CacheClear"
-        Me.LinkLabel_CacheClear.Size = New System.Drawing.Size(67, 13)
-        Me.LinkLabel_CacheClear.TabIndex = 12
-        Me.LinkLabel_CacheClear.TabStop = True
-        Me.LinkLabel_CacheClear.Text = "Clear Cache"
-        Me.LinkLabel_CacheClear.VisitedLinkColor = System.Drawing.SystemColors.HotTrack
         '
         'ClassTreeViewColumns_Images
         '
