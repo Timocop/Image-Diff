@@ -973,10 +973,13 @@
                                         ' Success
                                     End Using
 
-                                Case Else
+                                Case ENUM_HASHING_METHOD.GDI
                                     Using mImage As Image = Image.FromFile(sFileA)
                                         ' Success
                                     End Using
+
+                                Case Else
+                                    Continue While
                             End Select
                         Catch ex As ClassThread.ThreadAbortException
                             Throw
@@ -993,9 +996,12 @@
                                 Dim mHasher As New ClassHasherMagick
                                 m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
 
-                            Case Else
+                            Case ENUM_HASHING_METHOD.GDI
                                 Dim mHasher As New ClassHasherGdi
                                 m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
+
+                            Case Else
+                                Continue While
                         End Select
                     Else
                         Dim sHashA As Byte() = m_HashCache(sFileA)
@@ -1014,7 +1020,25 @@
                                     Continue For
                                 End If
 
-                                Dim iAvgDiff = CalculateHashSimilarity(sHashA, sHashB)
+                                Dim iAvgDiff As Double = 0.0
+
+                                Select Case (iHashingMethod)
+                                    Case ENUM_HASHING_METHOD.SKIA
+                                        Dim mHasher As New ClassHasherSkia
+                                        iAvgDiff = mHasher.GetSimilarity(sHashA, sHashB)
+
+                                    Case ENUM_HASHING_METHOD.MAGICK
+                                        Dim mHasher As New ClassHasherMagick
+                                        iAvgDiff = mHasher.GetSimilarity(sHashA, sHashB)
+
+                                    Case ENUM_HASHING_METHOD.GDI
+                                        Dim mHasher As New ClassHasherGdi
+                                        iAvgDiff = mHasher.GetSimilarity(sHashA, sHashB)
+
+                                    Case Else
+                                        Continue For
+                                End Select
+
                                 If (iAvgDiff < (iMaxImageDiff / 100)) Then
                                     Continue For
                                 End If
@@ -1056,7 +1080,63 @@
         Interface IImageHasher(Of T)
             Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
             Function GetHash(mImage As T, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
+
+            Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double
         End Interface
+
+        Class ClassHasherSHA256
+            Implements IImageHasher(Of Byte())
+
+            Public Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Byte()).GetHash
+                Using mStream As New IO.FileStream(sFile, IO.FileMode.Open, IO.FileAccess.Read)
+                    Using mHash As New Security.Cryptography.SHA256Managed()
+                        Return HashToBit(mHash.ComputeHash(mStream))
+                    End Using
+                End Using
+            End Function
+
+            Public Function GetHash(mImage As Byte(), iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Byte()).GetHash
+                Using mStream As New IO.MemoryStream(mImage)
+                    Using mHash As New Security.Cryptography.SHA256Managed()
+                        Return HashToBit(mHash.ComputeHash(mStream))
+                    End Using
+                End Using
+            End Function
+
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of Byte()).GetSimilarity
+                If (iHashA.Length <> iHashB.Length) Then
+                    Return 0.0
+                End If
+
+                For i = 0 To iHashA.Length - 1
+                    If (iHashA(i) <> iHashB(i)) Then
+                        Return 0.0
+                    End If
+                Next
+
+                Return 1.0
+            End Function
+
+            Private Function HashToBit(iHash As Byte()) As Byte()
+                Dim iHashBits(iHash.Length * 8 - 1) As Byte
+
+                Dim l As Integer = 0
+
+                For i = 0 To iHash.Length - 1
+                    For j = 0 To 8 - 1
+                        If ((iHash(i) And (1 << j)) = (1 << j)) Then
+                            iHashBits(l) = 1
+                        Else
+                            iHashBits(l) = 0
+                        End If
+
+                        l += 1
+                    Next
+                Next
+
+                Return iHashBits
+            End Function
+        End Class
 
         Class ClassHasherSkia
             Implements IImageHasher(Of SkiaSharp.SKBitmap)
@@ -1069,6 +1149,21 @@
 
             Public Function GetHash(mImage As SkiaSharp.SKBitmap, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of SkiaSharp.SKBitmap).GetHash
                 Return CalculateHashInternal(mImage, iThumbSize, bHighQuality)
+            End Function
+
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of SkiaSharp.SKBitmap).GetSimilarity
+                If (iHashA.Length <> iHashB.Length) Then
+                    Return 0.0
+                End If
+
+                Dim iMatchingBits As Integer = 0
+                For i = 0 To iHashA.Length - 1
+                    If (iHashA(i) = iHashB(i)) Then
+                        iMatchingBits += 1
+                    End If
+                Next
+
+                Return iMatchingBits / iHashA.Length
             End Function
 
             Private Function CalculateHashInternal(mThumbImage As SkiaSharp.SKBitmap, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
@@ -1112,6 +1207,7 @@
                     End If
                 End Try
             End Function
+
             Private Function ResizeImage(mSource As SkiaSharp.SKBitmap, iWidth As UInteger, iHeight As UInteger, bHighQuality As Boolean) As SkiaSharp.SKBitmap
                 Dim mSampling As SkiaSharp.SKSamplingOptions
 
@@ -1158,7 +1254,6 @@
                 End Using
                 Return mDest
             End Function
-
         End Class
 
         Class ClassHasherMagick
@@ -1174,6 +1269,21 @@
                 Using mThumbImage As New ImageMagick.MagickImage(mImage)
                     Return CalculateHashInternal(mThumbImage, iThumbSize, bHighQuality)
                 End Using
+            End Function
+
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of ImageMagick.MagickImage).GetSimilarity
+                If (iHashA.Length <> iHashB.Length) Then
+                    Return 0.0
+                End If
+
+                Dim iMatchingBits As Integer = 0
+                For i = 0 To iHashA.Length - 1
+                    If (iHashA(i) = iHashB(i)) Then
+                        iMatchingBits += 1
+                    End If
+                Next
+
+                Return iMatchingBits / iHashA.Length
             End Function
 
             Private Function CalculateHashInternal(mThumbImage As ImageMagick.MagickImage, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
@@ -1233,6 +1343,21 @@
                 Return CalculateHashInternal(mImage, iThumbSize, bHighQuality)
             End Function
 
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of Image).GetSimilarity
+                If (iHashA.Length <> iHashB.Length) Then
+                    Return 0.0
+                End If
+
+                Dim iMatchingBits As Integer = 0
+                For i = 0 To iHashA.Length - 1
+                    If (iHashA(i) = iHashB(i)) Then
+                        iMatchingBits += 1
+                    End If
+                Next
+
+                Return iMatchingBits / iHashA.Length
+            End Function
+
             Private Function CalculateHashInternal(mThumbImage As Image, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
                 Using mThumbBitmap As New Bitmap(CInt(iThumbSize), CInt(iThumbSize))
                     Using mG As Graphics = Graphics.FromImage(mThumbBitmap)
@@ -1281,21 +1406,6 @@
                 Return iTotal / (mImage.Width * mImage.Height)
             End Function
         End Class
-
-        Private Function CalculateHashSimilarity(iHashA As Byte(), iHashB As Byte()) As Double
-            If (iHashA.Length <> iHashB.Length) Then
-                Return 0.0
-            End If
-
-            Dim iMatchingBits As Integer = 0
-            For i = 0 To iHashA.Length - 1
-                If (iHashA(i) = iHashB(i)) Then
-                    iMatchingBits += 1
-                End If
-            Next
-
-            Return iMatchingBits / iHashA.Length
-        End Function
 
         Private Sub LoadCache()
             Dim iHashingMethod As Integer = m_HashingMethod
