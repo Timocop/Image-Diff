@@ -66,7 +66,6 @@
         InitializeComponent()
 
         ' Add any initialization after the InitializeComponent() call.
-        ClassTreeViewColumns_Images.m_Columns.Add("", 50)
         ClassTreeViewColumns_Images.m_Columns.Add("File", 250)
         ClassTreeViewColumns_Images.m_Columns.Add("Difference", 75)
         ClassTreeViewColumns_Images.m_Columns.Add("Size", 75)
@@ -880,7 +879,7 @@
 
                                                 Dim mRootFileItem = mFileItem.Value.Values(0)
 
-                                                Dim mRootTreeNode As New TreeNode(" > ")
+                                                Dim mRootTreeNode As New TreeNode()
                                                 mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
                                                 mRootTreeNode.NodeFont = New Font(g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Font, FontStyle.Bold)
                                                 mRootTreeNode.Tag = New String() {
@@ -891,7 +890,7 @@
                                                 For i = 1 To mFileItem.Value.Values.Count - 1
                                                     Dim mSubFileItem = mFileItem.Value.Values(i)
 
-                                                    Dim mSubTreeNode As New TreeNode("")
+                                                    Dim mSubTreeNode As New TreeNode()
                                                     mSubTreeNode.Tag = New String() {
                                                         mSubFileItem.sFile,
                                                         CStr(Math.Ceiling(mSubFileItem.iDifference * 100)),
