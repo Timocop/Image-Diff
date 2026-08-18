@@ -74,7 +74,8 @@
         ClassTreeViewColumns_Images.m_TreeView.ContextMenuStrip = ContextMenuStrip_Images
 
         AddHandler ClassTreeViewColumns_Images.m_TreeView.AfterSelect, AddressOf TreeView_AfterNode
-        AddHandler ClassTreeViewColumns_Images.m_TreeView.MouseDoubleClick, AddressOf TreeView_MouseDoubleClick
+        AddHandler ClassTreeViewColumns_Images.m_TreeView.NodeMouseDoubleClick, AddressOf TreeView_NodeMouseDoubleClick
+        AddHandler ClassTreeViewColumns_Images.m_TreeView.NodeMouseClick, AddressOf TreeView_MouseClick
 
         NumericUpDown_Threads.Minimum = 1
         NumericUpDown_Threads.Maximum = 64
@@ -104,15 +105,27 @@
         ImageMagick.OpenCL.IsEnabled = False
     End Sub
 
-    Private Sub TreeView_MouseDoubleClick(sender As Object, e As MouseEventArgs)
-        Try
-            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
+    Private Sub TreeView_MouseClick(sender As Object, e As TreeNodeMouseClickEventArgs)
+        If (e.Node Is Nothing) Then
+            Return
+        End If
 
-            If (mTreeView.SelectedNode Is Nothing) Then
+        Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
+
+        mTreeView.SelectedNode = e.Node
+    End Sub
+
+    Private Sub TreeView_NodeMouseDoubleClick(sender As Object, e As TreeNodeMouseClickEventArgs)
+        Try
+            If (e.Node Is Nothing) Then
                 Return
             End If
 
-            Dim sFile As String = CType(mTreeView.SelectedNode.Tag, String())(0)
+            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
+
+            mTreeView.SelectedNode = e.Node
+
+            Dim sFile As String = CType(e.Node.Tag, String())(0)
             If (Not IO.File.Exists(sFile)) Then
                 Return
             End If
@@ -125,6 +138,7 @@
 
     Private Sub TreeView_AfterNode(sender As Object, e As TreeViewEventArgs)
         Try
+            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
             Dim mFileNode = e.Node
             Dim mParentFileNode = mFileNode.Parent
 
@@ -132,79 +146,115 @@
                 Return
             End If
 
-            Dim sFileA As String = Nothing
-            Dim sFileB As String = Nothing
+            If (True) Then
 
-            If (mFileNode IsNot Nothing) Then
-                If (mParentFileNode Is Nothing) Then
-                    sFileA = DirectCast(mFileNode.Tag, String())(0)
-                    sFileB = Nothing
-                Else
-                    sFileB = DirectCast(mFileNode.Tag, String())(0)
-                    sFileA = DirectCast(mParentFileNode.Tag, String())(0)
-                End If
+                Dim sSelectedFile As String = CType(mFileNode.Tag, String())(0)
+
+                For Each mNode As TreeNode In mTreeView.Nodes
+                    Dim sFile As String = CType(mNode.Tag, String())(0)
+
+                    If (mFileNode IsNot mNode) Then
+                        If (String.Equals(sSelectedFile, sFile, StringComparison.InvariantCultureIgnoreCase)) Then
+                            mNode.BackColor = Color.FromKnownColor(KnownColor.PaleVioletRed)
+                        Else
+                            mNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+                        End If
+                    Else
+                        mNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+                    End If
+
+
+                    For Each mSubNode As TreeNode In mNode.Nodes
+                        Dim sSubFile As String = CType(mSubNode.Tag, String())(0)
+
+                        If (mFileNode IsNot mSubNode) Then
+                            If (String.Equals(sSelectedFile, sSubFile, StringComparison.InvariantCultureIgnoreCase)) Then
+                                mSubNode.BackColor = Color.FromKnownColor(KnownColor.PaleVioletRed)
+                            Else
+                                mSubNode.BackColor = Color.FromKnownColor(KnownColor.Window)
+                            End If
+                        Else
+                            mSubNode.BackColor = Color.FromKnownColor(KnownColor.Window)
+                        End If
+                    Next
+                Next
             End If
 
-            If (sFileA IsNot Nothing) Then
-                If (IO.File.Exists(sFileA)) Then
-                    Try
-                        Using i As New Bitmap(sFileA)
-                            SetPreviewImageA(i, sFileA)
-                        End Using
-                    Catch ex As Exception
+            ' Show preview
+            If (True) Then
+                Dim sFileA As String = Nothing
+                Dim sFileB As String = Nothing
+
+                If (mFileNode IsNot Nothing) Then
+                    If (mParentFileNode Is Nothing) Then
+                        sFileA = DirectCast(mFileNode.Tag, String())(0)
+                        sFileB = Nothing
+                    Else
+                        sFileB = DirectCast(mFileNode.Tag, String())(0)
+                        sFileA = DirectCast(mParentFileNode.Tag, String())(0)
+                    End If
+                End If
+
+                If (sFileA IsNot Nothing) Then
+                    If (IO.File.Exists(sFileA)) Then
                         Try
-                            ' Unsupported image, try skia
-                            Using i = SkiaSharp.SKBitmap.Decode(sFileA)
+                            Using i As New Bitmap(sFileA)
                                 SetPreviewImageA(i, sFileA)
                             End Using
-                        Catch ex2 As Exception
+                        Catch ex As Exception
                             Try
-                                ' Unsupported image, try Magick
-                                Using i As New ImageMagick.MagickImage(sFileA)
+                                ' Unsupported image, try skia
+                                Using i = SkiaSharp.SKBitmap.Decode(sFileA)
                                     SetPreviewImageA(i, sFileA)
                                 End Using
-                            Catch ex3 As Exception
-                                SetPreviewImageA(Nothing, Nothing)
+                            Catch ex2 As Exception
+                                Try
+                                    ' Unsupported image, try Magick
+                                    Using i As New ImageMagick.MagickImage(sFileA)
+                                        SetPreviewImageA(i, sFileA)
+                                    End Using
+                                Catch ex3 As Exception
+                                    SetPreviewImageA(Nothing, Nothing)
+                                End Try
                             End Try
                         End Try
-                    End Try
+                    Else
+                        SetPreviewImageA(Nothing, Nothing)
+                    End If
                 Else
                     SetPreviewImageA(Nothing, Nothing)
                 End If
-            Else
-                SetPreviewImageA(Nothing, Nothing)
-            End If
 
-            If (sFileB IsNot Nothing) Then
-                If (IO.File.Exists(sFileB)) Then
-                    Try
-                        Using i As New Bitmap(sFileB)
-                            SetPreviewImageB(i, sFileB)
-                        End Using
-                    Catch ex As Exception
+                If (sFileB IsNot Nothing) Then
+                    If (IO.File.Exists(sFileB)) Then
                         Try
-                            ' Unsupported image, try skia
-                            Using i = SkiaSharp.SKBitmap.Decode(sFileB)
+                            Using i As New Bitmap(sFileB)
                                 SetPreviewImageB(i, sFileB)
                             End Using
-                        Catch ex2 As Exception
+                        Catch ex As Exception
                             Try
-                                ' Unsupported image, try Magick
-                                Using i As New ImageMagick.MagickImage(sFileB)
+                                ' Unsupported image, try skia
+                                Using i = SkiaSharp.SKBitmap.Decode(sFileB)
                                     SetPreviewImageB(i, sFileB)
                                 End Using
-                            Catch ex3 As Exception
-                                SetPreviewImageB(Nothing, Nothing)
+                            Catch ex2 As Exception
+                                Try
+                                    ' Unsupported image, try Magick
+                                    Using i As New ImageMagick.MagickImage(sFileB)
+                                        SetPreviewImageB(i, sFileB)
+                                    End Using
+                                Catch ex3 As Exception
+                                    SetPreviewImageB(Nothing, Nothing)
+                                End Try
                             End Try
                         End Try
-                    End Try
+                    Else
+                        SetPreviewImageB(Nothing, Nothing)
+                    End If
                 Else
                     SetPreviewImageB(Nothing, Nothing)
                 End If
-            Else
-                SetPreviewImageB(Nothing, Nothing)
             End If
-
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -1690,7 +1740,8 @@
 
     Private Sub CleanUp()
         RemoveHandler ClassTreeViewColumns_Images.m_TreeView.AfterSelect, AddressOf TreeView_AfterNode
-        RemoveHandler ClassTreeViewColumns_Images.m_TreeView.MouseDoubleClick, AddressOf TreeView_MouseDoubleClick
+        RemoveHandler ClassTreeViewColumns_Images.m_TreeView.NodeMouseDoubleClick, AddressOf TreeView_NodeMouseDoubleClick
+        RemoveHandler ClassTreeViewColumns_Images.m_TreeView.NodeMouseClick, AddressOf TreeView_MouseClick
 
         If (g_ClassScanner IsNot Nothing) Then
             g_ClassScanner.Abort()
