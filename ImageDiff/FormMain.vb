@@ -687,6 +687,42 @@
             End Set
         End Property
 
+        Public Function GetHashCacheItems() As KeyValuePair(Of String, Byte())()
+            SyncLock g_mHashCacheLock
+                Return g_mHashCache.ToArray
+            End SyncLock
+        End Function
+
+        Public Function GetHashCacheItems(bOnlyDirectory As Boolean) As KeyValuePair(Of String, Byte())()
+            SyncLock g_mHashCacheLock
+                If (Not bOnlyDirectory) Then
+                    Return GetHashCacheItems()
+                End If
+
+                Dim mItems As New List(Of KeyValuePair(Of String, Byte()))
+
+                Dim sDirectory As String = m_Directory
+
+                For Each mItem In g_mHashCache
+                    Dim sFileDirectory As String = IO.Path.GetDirectoryName(mItem.Key)
+
+                    If (m_IncludeSubDirectories) Then
+                        If (Not sFileDirectory.StartsWith(sDirectory, StringComparison.InvariantCultureIgnoreCase)) Then
+                            Continue For
+                        End If
+                    Else
+                        If (Not sFileDirectory.Equals(sDirectory, StringComparison.InvariantCultureIgnoreCase)) Then
+                            Continue For
+                        End If
+                    End If
+
+                    mItems.Add(mItem)
+                Next
+
+                Return mItems.ToArray
+            End SyncLock
+        End Function
+
         Class ClassThread
             Private g_mThread As Threading.Thread = Nothing
             Private ReadOnly g_mCancelToken As New Threading.CancellationTokenSource
@@ -1038,12 +1074,9 @@
             Dim iHashingMethod = DirectCast(mData("HashingMethod"), ENUM_HASHING_METHOD)
             Dim iThumbSize = DirectCast(mData("ThumbSize"), Integer)
 
-            Dim mTotalFilesList As New HashSet(Of String)(StringComparison.InvariantCultureIgnoreCase)
-            For i = 0 To sTotalFiles.Length - 1
-                mTotalFilesList.Add(sTotalFiles(i))
-            Next
-
             Dim MAX_FILE_SIZE As Integer = 100 * 1024 * 1024
+
+            Dim mHashCacheItems As KeyValuePair(Of String, Byte())() = Nothing
 
             While True
                 Try
@@ -1058,8 +1091,6 @@
 
                         mThreadInfo("Files") = CInt(mThreadInfo("Files")) + 1
                     End SyncLock
-
-                    mTotalFilesList.Remove(sFileA)
 
                     If (mCancelToken.IsCancellationRequested) Then
                         Throw New ClassThread.ThreadAbortException
@@ -1132,13 +1163,19 @@
                             Continue While
                         End If
 
-                        For Each sFileB As String In mTotalFilesList
+                        If (mHashCacheItems Is Nothing) Then
+                            mHashCacheItems = GetHashCacheItems(True)
+                        End If
+
+                        For Each mFileB In mHashCacheItems
                             Try
+                                Dim sFileB As String = mFileB.Key
+
                                 If (mCancelToken.IsCancellationRequested) Then
                                     Throw New ClassThread.ThreadAbortException
                                 End If
 
-                                Dim sHashB As Byte() = m_HashCache(sFileB)
+                                Dim sHashB As Byte() = mFileB.Value
                                 If (sHashB.Length = 0) Then
                                     Continue For
                                 End If
