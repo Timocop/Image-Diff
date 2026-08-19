@@ -1631,7 +1631,7 @@
             SyncLock g_mHashCacheLock
                 Using mStream As New IO.MemoryStream()
                     Using mBinReader As New IO.BinaryWriter(mStream)
-                        Using mFileStream As New IO.FileStream(sCacheFile, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite)
+                        Using mFileStream As New IO.FileStream(sCacheFile, IO.FileMode.Create, IO.FileAccess.ReadWrite)
                             '[Checksum:Int32][Version:Int32]
                             ' ... [FilePathLength:Int32][FilePath:Byte()][HashMethod:Int32][FileModified:Int64][HashSize:Int32][Hash:Byte()]
 
