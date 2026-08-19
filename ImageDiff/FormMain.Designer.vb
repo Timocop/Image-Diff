@@ -431,7 +431,7 @@ Partial Class FormMain
         Me.GroupBox3.Size = New System.Drawing.Size(262, 228)
         Me.GroupBox3.TabIndex = 3
         Me.GroupBox3.TabStop = False
-        Me.GroupBox3.Text = "Main Image"
+        Me.GroupBox3.Text = "Selected Image"
         '
         'PictureBox_ImageAPreview
         '
@@ -453,7 +453,7 @@ Partial Class FormMain
         Me.GroupBox2.Size = New System.Drawing.Size(262, 228)
         Me.GroupBox2.TabIndex = 4
         Me.GroupBox2.TabStop = False
-        Me.GroupBox2.Text = "Secondary Image"
+        Me.GroupBox2.Text = "Parent Image"
         '
         'PictureBox_ImageBPreview
         '

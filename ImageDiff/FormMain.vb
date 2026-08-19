@@ -135,48 +135,44 @@
         End Try
     End Sub
 
+    Private g_mPreviousSelectedColoredNodes As New List(Of KeyValuePair(Of TreeNode, Color))
     Private Sub TreeView_AfterNode(sender As Object, e As TreeViewEventArgs)
         Try
             Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
             Dim mFileNode = e.Node
             Dim mParentFileNode = mFileNode.Parent
 
+            For Each mNodePair As KeyValuePair(Of TreeNode, Color) In g_mPreviousSelectedColoredNodes
+                If (mNodePair.Key Is Nothing) Then
+                    Continue For
+                End If
+
+                mNodePair.Key.BackColor = mNodePair.Value
+            Next
+            g_mPreviousSelectedColoredNodes.Clear()
+
             If (mFileNode Is Nothing) Then
                 Return
             End If
 
             If (True) Then
-
                 Dim sSelectedFile As String = CType(mFileNode.Tag, String())(0)
 
-                For Each mNode As TreeNode In mTreeView.Nodes
-                    Dim sFile As String = CType(mNode.Tag, String())(0)
+                Dim mFoundNodes = mTreeView.Nodes.Find(sSelectedFile.ToLowerInvariant, True)
 
-                    If (mFileNode IsNot mNode) Then
-                        If (String.Equals(sSelectedFile, sFile, StringComparison.InvariantCultureIgnoreCase)) Then
-                            mNode.BackColor = Color.FromKnownColor(KnownColor.PaleVioletRed)
-                        Else
-                            mNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
-                        End If
-                    Else
-                        mNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+                For Each mNode As TreeNode In mFoundNodes
+                    If (mFileNode Is mNode) Then
+                        Continue For
                     End If
 
-
-                    For Each mSubNode As TreeNode In mNode.Nodes
-                        Dim sSubFile As String = CType(mSubNode.Tag, String())(0)
-
-                        If (mFileNode IsNot mSubNode) Then
-                            If (String.Equals(sSelectedFile, sSubFile, StringComparison.InvariantCultureIgnoreCase)) Then
-                                mSubNode.BackColor = Color.FromKnownColor(KnownColor.PaleVioletRed)
-                            Else
-                                mSubNode.BackColor = Color.FromKnownColor(KnownColor.Window)
-                            End If
-                        Else
-                            mSubNode.BackColor = Color.FromKnownColor(KnownColor.Window)
-                        End If
-                    Next
+                    g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of TreeNode, Color)(mNode, mNode.BackColor))
+                    mNode.BackColor = Color.FromKnownColor(KnownColor.LightGreen)
                 Next
+
+                If (mParentFileNode IsNot Nothing) Then
+                    g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of TreeNode, Color)(mParentFileNode, mParentFileNode.BackColor))
+                    mParentFileNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+                End If
             End If
 
             ' Show preview
@@ -189,8 +185,8 @@
                         sFileA = DirectCast(mFileNode.Tag, String())(0)
                         sFileB = Nothing
                     Else
-                        sFileB = DirectCast(mFileNode.Tag, String())(0)
-                        sFileA = DirectCast(mParentFileNode.Tag, String())(0)
+                        sFileA = DirectCast(mFileNode.Tag, String())(0)
+                        sFileB = DirectCast(mParentFileNode.Tag, String())(0)
                     End If
                 End If
 
@@ -863,62 +859,65 @@
                                             End Try
                                         End Sub)
 
+                g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripStatusLabel_Progress.Text = "Preparing...")
+
+                Dim mRootNodeCollection As New TreeNode
+
+                For Each mFileItem In mDuplicateFiles
+                    If (mFileItem.Value Is Nothing OrElse mFileItem.Value.Count < 2) Then
+                        Continue For
+                    End If
+
+                    Dim mRootFileItem = mFileItem.Value.Values(0)
+
+                    Dim mExistingRootNodes As TreeNode() = mRootNodeCollection.Nodes.Find(mRootFileItem.sFile.ToLowerInvariant, True)
+                    Dim bNodeExisted As Boolean = False
+
+                    Dim mRootTreeNode As TreeNode
+
+                    If (mExistingRootNodes IsNot Nothing AndAlso mExistingRootNodes.Length > 0) Then
+                        mRootTreeNode = mExistingRootNodes(0)
+                        bNodeExisted = True
+                    Else
+                        mRootTreeNode = New TreeNode
+
+                        'mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+                        mRootTreeNode.Name = mRootFileItem.sFile.ToLowerInvariant
+                        mRootTreeNode.Tag = New String() {
+                                                        mRootFileItem.sFile,
+                                                        CStr(Math.Ceiling(mRootFileItem.iDifference * 100)),
+                                                        ClassHelpers.FormatBytes(mRootFileItem.iFileSize)}
+                    End If
+
+
+                    For i = 1 To mFileItem.Value.Values.Count - 1
+                        Dim mSubFileItem = mFileItem.Value.Values(i)
+
+                        Dim mSubTreeNode As New TreeNode
+                        mSubTreeNode.Name = mSubFileItem.sFile.ToLowerInvariant
+                        mSubTreeNode.Tag = New String() {
+                                                        mSubFileItem.sFile,
+                                                        CStr(Math.Ceiling(mSubFileItem.iDifference * 100)),
+                                                        ClassHelpers.FormatBytes(mSubFileItem.iFileSize)}
+
+                        mRootTreeNode.Nodes.Add(mSubTreeNode)
+                    Next
+
+                    If (Not bNodeExisted) Then
+                        mRootNodeCollection.Nodes.Add(mRootTreeNode)
+                    End If
+                Next
+
+                SortNodeCollection(mRootNodeCollection.Nodes)
 
                 g_fFormMain.BeginInvoke(Sub()
                                             g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Visible = False
                                             g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.Clear()
 
-                                            Dim mRootNodeCollection As New List(Of TreeNode)
-
-                                            For Each mFileItem In mDuplicateFiles
-                                                If (mFileItem.Value Is Nothing OrElse mFileItem.Value.Count < 2) Then
-                                                    Continue For
-                                                End If
-
-                                                Dim mSubNodeCollection As New List(Of TreeNode)
-
-                                                Dim mRootFileItem = mFileItem.Value.Values(0)
-
-                                                Dim mRootTreeNode As New TreeNode()
-                                                mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
-                                                mRootTreeNode.NodeFont = New Font(g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Font, FontStyle.Bold)
-                                                mRootTreeNode.Tag = New String() {
-                                                    mRootFileItem.sFile,
-                                                    CStr(Math.Ceiling(mRootFileItem.iDifference * 100)),
-                                                    ClassHelpers.FormatBytes(mRootFileItem.iFileSize)}
-
-                                                For i = 1 To mFileItem.Value.Values.Count - 1
-                                                    Dim mSubFileItem = mFileItem.Value.Values(i)
-
-                                                    Dim mSubTreeNode As New TreeNode()
-                                                    mSubTreeNode.Tag = New String() {
-                                                        mSubFileItem.sFile,
-                                                        CStr(Math.Ceiling(mSubFileItem.iDifference * 100)),
-                                                        ClassHelpers.FormatBytes(mSubFileItem.iFileSize)}
-
-                                                    mSubNodeCollection.Add(mSubTreeNode)
-                                                Next
-
-                                                mSubNodeCollection.Sort(Function(a As TreeNode, b As TreeNode)
-                                                                            Dim iDiffA As Integer = CInt(CType(a.Tag, String())(1))
-                                                                            Dim iDiffB As Integer = CInt(CType(b.Tag, String())(1))
-
-                                                                            Return iDiffB.CompareTo(iDiffA)
-                                                                        End Function)
-
-
-                                                mRootTreeNode.Nodes.AddRange(mSubNodeCollection.ToArray)
-                                                mRootNodeCollection.Add(mRootTreeNode)
+                                            For Each mNode As TreeNode In mRootNodeCollection.Nodes
+                                                g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.Add(mNode)
                                             Next
 
-                                            mRootNodeCollection.Sort(Function(a As TreeNode, b As TreeNode) As Integer
-                                                                         Dim sFileA As String = CType(a.Tag, String())(0)
-                                                                         Dim sFileB As String = CType(b.Tag, String())(0)
-
-                                                                         Return sFileA.CompareTo(sFileB)
-                                                                     End Function)
-
-                                            g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.AddRange(mRootNodeCollection.ToArray)
                                             g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.ExpandAll()
 
                                             If (g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.Count > 0) Then
@@ -949,6 +948,29 @@
 
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.Button_Select.Text = "Select")
             End Try
+        End Sub
+
+        Private Sub SortNodeCollection(mNodes As TreeNodeCollection)
+            If (mNodes.Count > 0) Then
+                Dim mSortedNodes As New List(Of TreeNode)
+                For Each mNode As TreeNode In mNodes
+                    mSortedNodes.Add(mNode)
+                Next
+
+                mSortedNodes.Sort(Function(x As TreeNode, y As TreeNode)
+                                      Dim iNode1Diff As Integer = CInt(CType(x.Tag, String())(1))
+                                      Dim iNode2Diff As Integer = CInt(CType(y.Tag, String())(1))
+
+                                      Return -iNode1Diff.CompareTo(iNode2Diff)
+                                  End Function)
+
+                mNodes.Clear()
+                For Each mNode As TreeNode In mSortedNodes
+                    mNodes.Add(mNode)
+
+                    SortNodeCollection(mNode.Nodes)
+                Next
+            End If
         End Sub
 
         Private Sub ThreadSubScanner(mCancelToken As Threading.CancellationTokenSource, mObject As Object)
