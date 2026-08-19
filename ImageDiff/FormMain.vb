@@ -96,7 +96,7 @@
 
         ' Add any initialization after the InitializeComponent() call.
         ClassTreeViewColumns_Images.m_Columns.Add("File", 250)
-        ClassTreeViewColumns_Images.m_Columns.Add("Difference", 75)
+        ClassTreeViewColumns_Images.m_Columns.Add("Similarity", 75)
         ClassTreeViewColumns_Images.m_Columns.Add("Size", 75)
 
         ClassTreeViewColumns_Images.m_TreeView.ContextMenuStrip = ContextMenuStrip_Images
@@ -938,7 +938,7 @@
                         mRootTreeNode.Name = mRootFileItem.sFile.ToLowerInvariant
                         mRootTreeNode.Tag = New String() {
                                                         mRootFileItem.sFile,
-                                                        CStr(Math.Floor(mRootFileItem.iDifference * 100)),
+                                                        String.Format("{0} %", CStr(Math.Floor(mRootFileItem.iDifference * 100))),
                                                         ClassHelpers.FormatBytes(mRootFileItem.iFileSize)}
                         mRootTreeNode.m_ImageInfo = mRootFileItem
                     End If
@@ -951,7 +951,7 @@
                         mSubTreeNode.Name = mSubFileItem.sFile.ToLowerInvariant
                         mSubTreeNode.Tag = New String() {
                                                         mSubFileItem.sFile,
-                                                        CStr(Math.Floor(mSubFileItem.iDifference * 100)),
+                                                        String.Format("{0} %", CStr(Math.Floor(mSubFileItem.iDifference * 100))),
                                                         ClassHelpers.FormatBytes(mSubFileItem.iFileSize)}
                         mSubTreeNode.m_ImageInfo = mSubFileItem
 
