@@ -13,15 +13,39 @@
         __MAX
     End Enum
 
+    Structure STRUC_DIFF_MARKING_ITEM
+        Dim iAlpha As Single
+
+        Public Sub New(_Alpha As Single)
+            iAlpha = _Alpha
+        End Sub
+
+        Public Overrides Function ToString() As String
+            If (iAlpha <= 0.0F) Then
+                Return "Hide"
+            End If
+
+            Return String.Format("Show {0}%", CInt(iAlpha * 100))
+        End Function
+    End Structure
+
     Structure STRUC_IMAGE_INFO
         Dim sFile As String
         Dim iDifference As Double
         Dim iFileSize As Double
 
-        Sub New(_File As String, _Difference As Double, _FileSize As Double)
+        Dim iHash As Byte()
+
+        Dim bIsValid As Boolean
+
+        Sub New(_File As String, _Difference As Double, _FileSize As Double, _Hash As Byte())
             sFile = _File
             iDifference = _Difference
             iFileSize = _FileSize
+
+            iHash = _Hash
+
+            bIsValid = True
         End Sub
     End Structure
 
@@ -60,8 +84,13 @@
         End Function
     End Structure
 
-    Public Sub New()
+    Class ClassImageTreeNode
+        Inherits TreeNode
 
+        Property m_ImageInfo As STRUC_IMAGE_INFO
+    End Class
+
+    Public Sub New()
         ' This call is required by the designer.
         InitializeComponent()
 
@@ -100,6 +129,15 @@
         ComboBox_HashingQuality.Items.Add("Low Quality, Fast")
         ComboBox_HashingQuality.SelectedIndex = 0
 
+        ToolStripComboBox_ShowDiffPreview.Items.Clear()
+        ToolStripComboBox_ShowDiffPreview.Items.Add(New STRUC_DIFF_MARKING_ITEM(0.0F))
+        ToolStripComboBox_ShowDiffPreview.Items.Add(New STRUC_DIFF_MARKING_ITEM(0.1F))
+        ToolStripComboBox_ShowDiffPreview.Items.Add(New STRUC_DIFF_MARKING_ITEM(0.25F))
+        ToolStripComboBox_ShowDiffPreview.Items.Add(New STRUC_DIFF_MARKING_ITEM(0.5F))
+        ToolStripComboBox_ShowDiffPreview.Items.Add(New STRUC_DIFF_MARKING_ITEM(0.75F))
+        ToolStripComboBox_ShowDiffPreview.Items.Add(New STRUC_DIFF_MARKING_ITEM(1.0F))
+        ToolStripComboBox_ShowDiffPreview.SelectedIndex = 0
+
         ImageMagick.MagickNET.Initialize()
         ImageMagick.OpenCL.IsEnabled = False
     End Sub
@@ -124,135 +162,124 @@
 
             mTreeView.SelectedNode = e.Node
 
-            Dim sFile As String = CType(e.Node.Tag, String())(0)
-            If (Not IO.File.Exists(sFile)) Then
+            Dim mImageTreeNode = DirectCast(e.Node, ClassImageTreeNode)
+            If (Not IO.File.Exists(mImageTreeNode.m_ImageInfo.sFile)) Then
                 Return
             End If
 
-            Process.Start(sFile)
+            Process.Start(mImageTreeNode.m_ImageInfo.sFile)
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
 
-    Private g_mPreviousSelectedColoredNodes As New List(Of KeyValuePair(Of TreeNode, Color))
     Private Sub TreeView_AfterNode(sender As Object, e As TreeViewEventArgs)
         Try
-            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
-            Dim mFileNode = e.Node
-            Dim mParentFileNode = mFileNode.Parent
-
-            For Each mNodePair As KeyValuePair(Of TreeNode, Color) In g_mPreviousSelectedColoredNodes
-                If (mNodePair.Key Is Nothing) Then
-                    Continue For
-                End If
-
-                mNodePair.Key.BackColor = mNodePair.Value
-            Next
-            g_mPreviousSelectedColoredNodes.Clear()
-
-            If (mFileNode Is Nothing) Then
-                Return
-            End If
-
-            If (True) Then
-                Dim sSelectedFile As String = CType(mFileNode.Tag, String())(0)
-
-                Dim mFoundNodes = mTreeView.Nodes.Find(sSelectedFile.ToLowerInvariant, True)
-
-                For Each mNode As TreeNode In mFoundNodes
-                    If (mFileNode Is mNode) Then
-                        Continue For
-                    End If
-
-                    g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of TreeNode, Color)(mNode, mNode.BackColor))
-                    mNode.BackColor = Color.FromKnownColor(KnownColor.LightGreen)
-                Next
-
-                If (mParentFileNode IsNot Nothing) Then
-                    g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of TreeNode, Color)(mParentFileNode, mParentFileNode.BackColor))
-                    mParentFileNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
-                End If
-            End If
-
-            ' Show preview
-            If (True) Then
-                Dim sFileA As String = Nothing
-                Dim sFileB As String = Nothing
-
-                If (mFileNode IsNot Nothing) Then
-                    If (mParentFileNode Is Nothing) Then
-                        sFileA = DirectCast(mFileNode.Tag, String())(0)
-                        sFileB = Nothing
-                    Else
-                        sFileA = DirectCast(mFileNode.Tag, String())(0)
-                        sFileB = DirectCast(mParentFileNode.Tag, String())(0)
-                    End If
-                End If
-
-                If (sFileA IsNot Nothing) Then
-                    If (IO.File.Exists(sFileA)) Then
-                        Try
-                            Using i As New Bitmap(sFileA)
-                                SetPreviewImageA(i, sFileA)
-                            End Using
-                        Catch ex As Exception
-                            Try
-                                ' Unsupported image, try skia
-                                Using i = SkiaSharp.SKBitmap.Decode(sFileA)
-                                    SetPreviewImageA(i, sFileA)
-                                End Using
-                            Catch ex2 As Exception
-                                Try
-                                    ' Unsupported image, try Magick
-                                    Using i As New ImageMagick.MagickImage(sFileA)
-                                        SetPreviewImageA(i, sFileA)
-                                    End Using
-                                Catch ex3 As Exception
-                                    SetPreviewImageA(Nothing, Nothing)
-                                End Try
-                            End Try
-                        End Try
-                    Else
-                        SetPreviewImageA(Nothing, Nothing)
-                    End If
-                Else
-                    SetPreviewImageA(Nothing, Nothing)
-                End If
-
-                If (sFileB IsNot Nothing) Then
-                    If (IO.File.Exists(sFileB)) Then
-                        Try
-                            Using i As New Bitmap(sFileB)
-                                SetPreviewImageB(i, sFileB)
-                            End Using
-                        Catch ex As Exception
-                            Try
-                                ' Unsupported image, try skia
-                                Using i = SkiaSharp.SKBitmap.Decode(sFileB)
-                                    SetPreviewImageB(i, sFileB)
-                                End Using
-                            Catch ex2 As Exception
-                                Try
-                                    ' Unsupported image, try Magick
-                                    Using i As New ImageMagick.MagickImage(sFileB)
-                                        SetPreviewImageB(i, sFileB)
-                                    End Using
-                                Catch ex3 As Exception
-                                    SetPreviewImageB(Nothing, Nothing)
-                                End Try
-                            End Try
-                        End Try
-                    Else
-                        SetPreviewImageB(Nothing, Nothing)
-                    End If
-                Else
-                    SetPreviewImageB(Nothing, Nothing)
-                End If
-            End If
+            ShowPreviewFromNode(e.Node)
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
+    End Sub
+
+    Private g_mPreviousSelectedColoredNodes As New List(Of KeyValuePair(Of ClassImageTreeNode, Color))
+    Private Sub ShowPreviewFromNode(mSelectedNode As TreeNode)
+        Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
+        Dim mFileNode = DirectCast(mSelectedNode, ClassImageTreeNode)
+        Dim mParentFileNode = DirectCast(mFileNode.Parent, ClassImageTreeNode)
+
+        Dim iDifferenceAlpha As Single = DirectCast(ToolStripComboBox_ShowDiffPreview.SelectedItem, STRUC_DIFF_MARKING_ITEM).iAlpha
+
+        For Each mNodePair As KeyValuePair(Of ClassImageTreeNode, Color) In g_mPreviousSelectedColoredNodes
+            If (mNodePair.Key Is Nothing) Then
+                Continue For
+            End If
+
+            mNodePair.Key.BackColor = mNodePair.Value
+        Next
+        g_mPreviousSelectedColoredNodes.Clear()
+
+        If (mFileNode Is Nothing) Then
+            Return
+        End If
+
+        If (True) Then
+            Dim mFoundNodes = mTreeView.Nodes.Find(mFileNode.m_ImageInfo.sFile.ToLowerInvariant, True)
+
+            For Each mNode As ClassImageTreeNode In mFoundNodes
+                If (mFileNode Is mNode) Then
+                    Continue For
+                End If
+
+                g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of ClassImageTreeNode, Color)(mNode, mNode.BackColor))
+                mNode.BackColor = Color.FromKnownColor(KnownColor.LightGreen)
+            Next
+
+            If (mParentFileNode IsNot Nothing) Then
+                g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of ClassImageTreeNode, Color)(mParentFileNode, mParentFileNode.BackColor))
+                mParentFileNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+            End If
+        End If
+
+        ' Show preview 
+        If (mFileNode IsNot Nothing) Then
+            If (IO.File.Exists(mFileNode.m_ImageInfo.sFile)) Then
+                Try
+                    Using i As New Bitmap(mFileNode.m_ImageInfo.sFile)
+                        SetPreviewImage(PictureBox_ImageAPreview, i, mFileNode, mParentFileNode, iDifferenceAlpha)
+                    End Using
+                Catch ex As Exception
+                    Try
+                        ' Unsupported image, try skia
+                        Using i = SkiaSharp.SKBitmap.Decode(mFileNode.m_ImageInfo.sFile)
+                            SetPreviewImage(PictureBox_ImageAPreview, i, mFileNode, mParentFileNode, iDifferenceAlpha)
+                        End Using
+                    Catch ex2 As Exception
+                        Try
+                            ' Unsupported image, try Magick
+                            Using i As New ImageMagick.MagickImage(mFileNode.m_ImageInfo.sFile)
+                                SetPreviewImage(PictureBox_ImageAPreview, i, mFileNode, mParentFileNode, iDifferenceAlpha)
+                            End Using
+                        Catch ex3 As Exception
+                            SetPreviewImage(PictureBox_ImageAPreview, Nothing, New STRUC_IMAGE_INFO(), New STRUC_IMAGE_INFO(), 0.0F)
+                        End Try
+                    End Try
+                End Try
+            Else
+                SetPreviewImage(PictureBox_ImageAPreview, Nothing, New STRUC_IMAGE_INFO(), New STRUC_IMAGE_INFO(), 0.0F)
+            End If
+        Else
+            SetPreviewImage(PictureBox_ImageAPreview, Nothing, New STRUC_IMAGE_INFO(), New STRUC_IMAGE_INFO(), 0.0F)
+        End If
+
+        If (mParentFileNode IsNot Nothing) Then
+            If (IO.File.Exists(mParentFileNode.m_ImageInfo.sFile)) Then
+                Try
+                    Using i As New Bitmap(mParentFileNode.m_ImageInfo.sFile)
+                        SetPreviewImage(PictureBox_ImageBPreview, i, mParentFileNode, mFileNode, iDifferenceAlpha)
+                    End Using
+                Catch ex As Exception
+                    Try
+                        ' Unsupported image, try skia
+                        Using i = SkiaSharp.SKBitmap.Decode(mParentFileNode.m_ImageInfo.sFile)
+                            SetPreviewImage(PictureBox_ImageBPreview, i, mParentFileNode, mFileNode, iDifferenceAlpha)
+                        End Using
+                    Catch ex2 As Exception
+                        Try
+                            ' Unsupported image, try Magick
+                            Using i As New ImageMagick.MagickImage(mParentFileNode.m_ImageInfo.sFile)
+                                SetPreviewImage(PictureBox_ImageBPreview, i, mParentFileNode, mFileNode, iDifferenceAlpha)
+                            End Using
+                        Catch ex3 As Exception
+                            SetPreviewImage(PictureBox_ImageBPreview, Nothing, New STRUC_IMAGE_INFO(), New STRUC_IMAGE_INFO(), 0.0F)
+                        End Try
+                    End Try
+                End Try
+            Else
+                SetPreviewImage(PictureBox_ImageBPreview, Nothing, New STRUC_IMAGE_INFO(), New STRUC_IMAGE_INFO(), 0.0F)
+            End If
+        Else
+            SetPreviewImage(PictureBox_ImageBPreview, Nothing, New STRUC_IMAGE_INFO(), New STRUC_IMAGE_INFO(), 0.0F)
+        End If
     End Sub
 
     Private Sub LinkLabel_CacheClear_LinkClicked(sender As Object, e As LinkLabelLinkClickedEventArgs) Handles LinkLabel_CacheClear.LinkClicked
@@ -451,15 +478,41 @@
         End Try
     End Sub
 
-    Public Sub SetPreviewImageA(mImage As Object, sFile As String)
-        If (PictureBox_ImageAPreview.Image IsNot Nothing) Then
-            PictureBox_ImageAPreview.Image.Dispose()
+    Private Sub ToolStripComboBox_ShowDiffPreview_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ToolStripComboBox_ShowDiffPreview.SelectedIndexChanged
+        Try
+            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
 
-            PictureBox_ImageAPreview.Image = Nothing
-            PictureBox_ImageAPreview.Tag = Nothing
+            If (mTreeView.SelectedNode Is Nothing) Then
+                Return
+            End If
+
+            ShowPreviewFromNode(mTreeView.SelectedNode)
+        Catch ex As Exception
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Public Sub SetPreviewImage(mImageControl As PictureBox, mImage As Object, mMainImageInfo As ClassImageTreeNode, mSecondImageInfo As ClassImageTreeNode, iDifferenceAlpha As Single)
+        SetPreviewImage(mImageControl,
+                        mImage,
+                        If(mMainImageInfo Is Nothing, New STRUC_IMAGE_INFO(), mMainImageInfo.m_ImageInfo),
+                        If(mSecondImageInfo Is Nothing, New STRUC_IMAGE_INFO(), mSecondImageInfo.m_ImageInfo),
+                        iDifferenceAlpha)
+    End Sub
+
+    Public Sub SetPreviewImage(mImageControl As PictureBox, mImage As Object, mMainImageInfo As STRUC_IMAGE_INFO, mSecondImageInfo As STRUC_IMAGE_INFO, iDifferenceAlpha As Single)
+        If (mImageControl.Image IsNot Nothing) Then
+            mImageControl.Image.Dispose()
+
+            mImageControl.Image = Nothing
+            mImageControl.Tag = Nothing
         End If
 
         If (mImage Is Nothing) Then
+            Return
+        End If
+
+        If (Not mMainImageInfo.bIsValid) Then
             Return
         End If
 
@@ -471,8 +524,13 @@
                     mNewImage.Save(mStream, Imaging.ImageFormat.Jpeg)
                     mStream.Position = 0
 
-                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageAPreview.Tag = sFile
+                    Dim mPreviewImage As Image = Image.FromStream(mStream)
+                    If (iDifferenceAlpha > 0.0F AndAlso mSecondImageInfo.bIsValid) Then
+                        DrawImageDifferenceFromHash(mPreviewImage, mMainImageInfo.iHash, mSecondImageInfo.iHash, iDifferenceAlpha)
+                    End If
+
+                    mImageControl.Image = mPreviewImage
+                    mImageControl.Tag = mMainImageInfo.sFile
                 End Using
 
             Case (TypeOf mImage Is ImageMagick.MagickImage)
@@ -482,8 +540,13 @@
                     mNewImage.Write(mStream, ImageMagick.MagickFormat.Jpg)
                     mStream.Position = 0
 
-                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageAPreview.Tag = sFile
+                    Dim mPreviewImage As Image = Image.FromStream(mStream)
+                    If (iDifferenceAlpha > 0.0F AndAlso mSecondImageInfo.bIsValid) Then
+                        DrawImageDifferenceFromHash(mPreviewImage, mMainImageInfo.iHash, mSecondImageInfo.iHash, iDifferenceAlpha)
+                    End If
+
+                    mImageControl.Image = mPreviewImage
+                    mImageControl.Tag = mMainImageInfo.sFile
                 End Using
 
             Case (TypeOf mImage Is SkiaSharp.SKBitmap)
@@ -492,63 +555,53 @@
                 Using mStream As New IO.MemoryStream()
                     Dim mData = mNewImage.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 95)
                     mData.SaveTo(mStream)
-
                     mStream.Position = 0
 
-                    PictureBox_ImageAPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageAPreview.Tag = sFile
+                    Dim mPreviewImage As Image = Image.FromStream(mStream)
+                    If (iDifferenceAlpha > 0.0F AndAlso mSecondImageInfo.bIsValid) Then
+                        DrawImageDifferenceFromHash(mPreviewImage, mMainImageInfo.iHash, mSecondImageInfo.iHash, iDifferenceAlpha)
+                    End If
+
+                    mImageControl.Image = mPreviewImage
+                    mImageControl.Tag = mMainImageInfo.sFile
                 End Using
         End Select
     End Sub
 
-    Public Sub SetPreviewImageB(mImage As Object, sFile As String)
-        If (PictureBox_ImageBPreview.Image IsNot Nothing) Then
-            PictureBox_ImageBPreview.Image.Dispose()
+    Private Sub DrawImageDifferenceFromHash(mImage As Image, iHashA As Byte(), iHashB As Byte(), iAlpha As Single)
+        Dim iThumbSizeA As Integer = CInt(Math.Sqrt(iHashA.Length))
+        Dim iThumbSizeB As Integer = CInt(Math.Sqrt(iHashB.Length))
 
-            PictureBox_ImageBPreview.Image = Nothing
-            PictureBox_ImageBPreview.Tag = Nothing
-        End If
-
-        If (mImage Is Nothing) Then
+        If (iHashA.Length <> iHashB.Length) Then
             Return
         End If
 
-        Select Case (True)
-            Case (TypeOf mImage Is Image)
-                Dim mNewImage = DirectCast(mImage, Image)
+        If ((iThumbSizeA * iThumbSizeA) <> iHashA.Length) Then
+            Return
+        End If
 
-                Using mStream As New IO.MemoryStream()
-                    mNewImage.Save(mStream, Imaging.ImageFormat.Jpeg)
-                    mStream.Position = 0
+        If ((iThumbSizeB * iThumbSizeB) <> iHashB.Length) Then
+            Return
+        End If
 
-                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageBPreview.Tag = sFile
-                End Using
+        Dim iBlockWidth As Single = CSng(mImage.Width / iThumbSizeA)
+        Dim iBlockHeight As Single = CSng(mImage.Height / iThumbSizeA)
 
-            Case (TypeOf mImage Is ImageMagick.MagickImage)
-                Dim mNewImage = DirectCast(mImage, ImageMagick.MagickImage)
+        Using mG As Graphics = Graphics.FromImage(mImage)
+            Using mBrush As New SolidBrush(Color.FromArgb(CInt(iAlpha * 255), 255, 0, 0))
+                For i = 0 To iHashA.Length - 1
+                    If (iHashA(i) <> iHashB(i)) Then
+                        Dim iRow As Integer = (i \ iThumbSizeA)
+                        Dim iCol As Integer = (i Mod iThumbSizeA)
 
-                Using mStream As New IO.MemoryStream()
-                    mNewImage.Write(mStream, ImageMagick.MagickFormat.Jpg)
-                    mStream.Position = 0
+                        Dim iX As Single = (iCol * iBlockWidth)
+                        Dim iY As Single = (iRow * iBlockHeight)
 
-                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageBPreview.Tag = sFile
-                End Using
-
-            Case (TypeOf mImage Is SkiaSharp.SKBitmap)
-                Dim mNewImage = DirectCast(mImage, SkiaSharp.SKBitmap)
-
-                Using mStream As New IO.MemoryStream()
-                    Dim mData = mNewImage.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 95)
-                    mData.SaveTo(mStream)
-
-                    mStream.Position = 0
-
-                    PictureBox_ImageBPreview.Image = Image.FromStream(mStream)
-                    PictureBox_ImageBPreview.Tag = sFile
-                End Using
-        End Select
+                        mG.FillRectangle(mBrush, iX, iY, iBlockWidth, iBlockHeight)
+                    End If
+                Next
+            End Using
+        End Using
     End Sub
 
     Class ClassScanner
@@ -861,7 +914,7 @@
 
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripStatusLabel_Progress.Text = "Preparing...")
 
-                Dim mRootNodeCollection As New TreeNode
+                Dim mRootNodeCollection As New ClassImageTreeNode
 
                 For Each mFileItem In mDuplicateFiles
                     If (mFileItem.Value Is Nothing OrElse mFileItem.Value.Count < 2) Then
@@ -873,13 +926,13 @@
                     Dim mExistingRootNodes As TreeNode() = mRootNodeCollection.Nodes.Find(mRootFileItem.sFile.ToLowerInvariant, True)
                     Dim bNodeExisted As Boolean = False
 
-                    Dim mRootTreeNode As TreeNode
+                    Dim mRootTreeNode As ClassImageTreeNode
 
                     If (mExistingRootNodes IsNot Nothing AndAlso mExistingRootNodes.Length > 0) Then
-                        mRootTreeNode = mExistingRootNodes(0)
+                        mRootTreeNode = DirectCast(mExistingRootNodes(0), ClassImageTreeNode)
                         bNodeExisted = True
                     Else
-                        mRootTreeNode = New TreeNode
+                        mRootTreeNode = New ClassImageTreeNode
 
                         'mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
                         mRootTreeNode.Name = mRootFileItem.sFile.ToLowerInvariant
@@ -887,18 +940,20 @@
                                                         mRootFileItem.sFile,
                                                         CStr(Math.Ceiling(mRootFileItem.iDifference * 100)),
                                                         ClassHelpers.FormatBytes(mRootFileItem.iFileSize)}
+                        mRootTreeNode.m_ImageInfo = mRootFileItem
                     End If
 
 
                     For i = 1 To mFileItem.Value.Values.Count - 1
                         Dim mSubFileItem = mFileItem.Value.Values(i)
 
-                        Dim mSubTreeNode As New TreeNode
+                        Dim mSubTreeNode As New ClassImageTreeNode
                         mSubTreeNode.Name = mSubFileItem.sFile.ToLowerInvariant
                         mSubTreeNode.Tag = New String() {
                                                         mSubFileItem.sFile,
                                                         CStr(Math.Ceiling(mSubFileItem.iDifference * 100)),
                                                         ClassHelpers.FormatBytes(mSubFileItem.iFileSize)}
+                        mSubTreeNode.m_ImageInfo = mSubFileItem
 
                         mRootTreeNode.Nodes.Add(mSubTreeNode)
                     Next
@@ -914,7 +969,7 @@
                                             g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Visible = False
                                             g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.Clear()
 
-                                            For Each mNode As TreeNode In mRootNodeCollection.Nodes
+                                            For Each mNode As ClassImageTreeNode In mRootNodeCollection.Nodes
                                                 g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Nodes.Add(mNode)
                                             Next
 
@@ -952,20 +1007,17 @@
 
         Private Sub SortNodeCollection(mNodes As TreeNodeCollection)
             If (mNodes.Count > 0) Then
-                Dim mSortedNodes As New List(Of TreeNode)
-                For Each mNode As TreeNode In mNodes
+                Dim mSortedNodes As New List(Of ClassImageTreeNode)
+                For Each mNode As ClassImageTreeNode In mNodes
                     mSortedNodes.Add(mNode)
                 Next
 
-                mSortedNodes.Sort(Function(x As TreeNode, y As TreeNode)
-                                      Dim iNode1Diff As Integer = CInt(CType(x.Tag, String())(1))
-                                      Dim iNode2Diff As Integer = CInt(CType(y.Tag, String())(1))
-
-                                      Return -iNode1Diff.CompareTo(iNode2Diff)
+                mSortedNodes.Sort(Function(x As ClassImageTreeNode, y As ClassImageTreeNode)
+                                      Return y.m_ImageInfo.iDifference.CompareTo(x.m_ImageInfo.iDifference)
                                   End Function)
 
                 mNodes.Clear()
-                For Each mNode As TreeNode In mSortedNodes
+                For Each mNode As ClassImageTreeNode In mSortedNodes
                     mNodes.Add(mNode)
 
                     SortNodeCollection(mNode.Nodes)
@@ -1127,10 +1179,10 @@
 
                                     If (Not mImageInfo.ContainsKey(sFileA)) Then
                                         mImageInfo(sFileA) = New Dictionary(Of String, STRUC_IMAGE_INFO)
-                                        mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1, New IO.FileInfo(sFileA).Length)
+                                        mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1, New IO.FileInfo(sFileA).Length, sHashA)
                                     End If
 
-                                    mImageInfo(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length)
+                                    mImageInfo(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length, sHashB)
                                 End SyncLock
 
                             Catch ex As ClassThread.ThreadAbortException
@@ -1770,7 +1822,18 @@
             g_ClassScanner = Nothing
         End If
 
-        SetPreviewImageA(Nothing, Nothing)
-        SetPreviewImageB(Nothing, Nothing)
+        If (PictureBox_ImageAPreview.Image IsNot Nothing) Then
+            PictureBox_ImageAPreview.Image.Dispose()
+
+            PictureBox_ImageAPreview.Image = Nothing
+            PictureBox_ImageAPreview.Tag = Nothing
+        End If
+
+        If (PictureBox_ImageBPreview.Image IsNot Nothing) Then
+            PictureBox_ImageBPreview.Image.Dispose()
+
+            PictureBox_ImageBPreview.Image = Nothing
+            PictureBox_ImageBPreview.Tag = Nothing
+        End If
     End Sub
 End Class

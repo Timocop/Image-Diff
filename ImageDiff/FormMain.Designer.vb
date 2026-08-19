@@ -48,6 +48,9 @@ Partial Class FormMain
         Me.ToolStripMenuItem_Open = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripMenuItem_OpenExplorer = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripSeparator1 = New System.Windows.Forms.ToolStripSeparator()
+        Me.ToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
+        Me.ToolStripComboBox_ShowDiffPreview = New System.Windows.Forms.ToolStripComboBox()
+        Me.ToolStripSeparator2 = New System.Windows.Forms.ToolStripSeparator()
         Me.ToolStripMenuItem_Remove = New System.Windows.Forms.ToolStripMenuItem()
         Me.StatusStrip1 = New System.Windows.Forms.StatusStrip()
         Me.ToolStripProgressBar_Progress = New System.Windows.Forms.ToolStripProgressBar()
@@ -283,33 +286,53 @@ Partial Class FormMain
         '
         'ContextMenuStrip_Images
         '
-        Me.ContextMenuStrip_Images.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem_Open, Me.ToolStripMenuItem_OpenExplorer, Me.ToolStripSeparator1, Me.ToolStripMenuItem_Remove})
+        Me.ContextMenuStrip_Images.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripMenuItem_Open, Me.ToolStripMenuItem_OpenExplorer, Me.ToolStripSeparator1, Me.ToolStripMenuItem1, Me.ToolStripComboBox_ShowDiffPreview, Me.ToolStripSeparator2, Me.ToolStripMenuItem_Remove})
         Me.ContextMenuStrip_Images.Name = "ContextMenuStrip_Images"
-        Me.ContextMenuStrip_Images.Size = New System.Drawing.Size(163, 76)
+        Me.ContextMenuStrip_Images.Size = New System.Drawing.Size(220, 131)
         '
         'ToolStripMenuItem_Open
         '
         Me.ToolStripMenuItem_Open.Image = CType(resources.GetObject("ToolStripMenuItem_Open.Image"), System.Drawing.Image)
         Me.ToolStripMenuItem_Open.Name = "ToolStripMenuItem_Open"
-        Me.ToolStripMenuItem_Open.Size = New System.Drawing.Size(162, 22)
+        Me.ToolStripMenuItem_Open.Size = New System.Drawing.Size(219, 22)
         Me.ToolStripMenuItem_Open.Text = "Open"
         '
         'ToolStripMenuItem_OpenExplorer
         '
         Me.ToolStripMenuItem_OpenExplorer.Name = "ToolStripMenuItem_OpenExplorer"
-        Me.ToolStripMenuItem_OpenExplorer.Size = New System.Drawing.Size(162, 22)
+        Me.ToolStripMenuItem_OpenExplorer.Size = New System.Drawing.Size(219, 22)
         Me.ToolStripMenuItem_OpenExplorer.Text = "Open in explorer"
         '
         'ToolStripSeparator1
         '
         Me.ToolStripSeparator1.Name = "ToolStripSeparator1"
-        Me.ToolStripSeparator1.Size = New System.Drawing.Size(159, 6)
+        Me.ToolStripSeparator1.Size = New System.Drawing.Size(216, 6)
+        '
+        'ToolStripMenuItem1
+        '
+        Me.ToolStripMenuItem1.Enabled = False
+        Me.ToolStripMenuItem1.Name = "ToolStripMenuItem1"
+        Me.ToolStripMenuItem1.Size = New System.Drawing.Size(219, 22)
+        Me.ToolStripMenuItem1.Text = "Show difference in preview:"
+        '
+        'ToolStripComboBox_ShowDiffPreview
+        '
+        Me.ToolStripComboBox_ShowDiffPreview.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.ToolStripComboBox_ShowDiffPreview.DropDownWidth = 150
+        Me.ToolStripComboBox_ShowDiffPreview.FlatStyle = System.Windows.Forms.FlatStyle.Standard
+        Me.ToolStripComboBox_ShowDiffPreview.Name = "ToolStripComboBox_ShowDiffPreview"
+        Me.ToolStripComboBox_ShowDiffPreview.Size = New System.Drawing.Size(121, 23)
+        '
+        'ToolStripSeparator2
+        '
+        Me.ToolStripSeparator2.Name = "ToolStripSeparator2"
+        Me.ToolStripSeparator2.Size = New System.Drawing.Size(216, 6)
         '
         'ToolStripMenuItem_Remove
         '
         Me.ToolStripMenuItem_Remove.Image = CType(resources.GetObject("ToolStripMenuItem_Remove.Image"), System.Drawing.Image)
         Me.ToolStripMenuItem_Remove.Name = "ToolStripMenuItem_Remove"
-        Me.ToolStripMenuItem_Remove.Size = New System.Drawing.Size(162, 22)
+        Me.ToolStripMenuItem_Remove.Size = New System.Drawing.Size(219, 22)
         Me.ToolStripMenuItem_Remove.Text = "Remove"
         '
         'StatusStrip1
@@ -589,4 +612,7 @@ Partial Class FormMain
     Friend WithEvents ColumnHeader11 As ColumnHeader
     Friend WithEvents ClassTreeViewColumns_Images As ClassTreeViewColumns
     Friend WithEvents LinkLabel_CacheClear As LinkLabel
+    Friend WithEvents ToolStripMenuItem1 As ToolStripMenuItem
+    Friend WithEvents ToolStripComboBox_ShowDiffPreview As ToolStripComboBox
+    Friend WithEvents ToolStripSeparator2 As ToolStripSeparator
 End Class
