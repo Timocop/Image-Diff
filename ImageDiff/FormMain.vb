@@ -397,12 +397,12 @@
                 Return
             End If
 
-            Dim sFile As String = CType(mTreeView.SelectedNode.Tag, String())(0)
-            If (Not IO.File.Exists(sFile)) Then
+            Dim mImageTreeNode = DirectCast(mTreeView.SelectedNode, ClassImageTreeNode)
+            If (Not IO.File.Exists(mImageTreeNode.m_ImageInfo.sFile)) Then
                 Return
             End If
 
-            Process.Start(sFile)
+            Process.Start(mImageTreeNode.m_ImageInfo.sFile)
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -416,12 +416,12 @@
                 Return
             End If
 
-            Dim sFile As String = CType(mTreeView.SelectedNode.Tag, String())(0)
-            If (Not IO.File.Exists(sFile)) Then
+            Dim mImageTreeNode = DirectCast(mTreeView.SelectedNode, ClassImageTreeNode)
+            If (Not IO.File.Exists(mImageTreeNode.m_ImageInfo.sFile)) Then
                 Return
             End If
 
-            Process.Start("explorer.exe", String.Format("/select,""{0}""", sFile))
+            Process.Start("explorer.exe", String.Format("/select,""{0}""", mImageTreeNode.m_ImageInfo.sFile))
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -435,16 +435,16 @@
                 Return
             End If
 
-            Dim sFile As String = CType(mTreeView.SelectedNode.Tag, String())(0)
-            If (Not IO.File.Exists(sFile)) Then
+            Dim mImageTreeNode = DirectCast(mTreeView.SelectedNode, ClassImageTreeNode)
+            If (Not IO.File.Exists(mImageTreeNode.m_ImageInfo.sFile)) Then
                 Return
             End If
 
-            If (MessageBox.Show(String.Format("Do you want to delete {0}?", sFile), "Delete files", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.No) Then
+            If (MessageBox.Show(String.Format("Do you want to delete {0}?", mImageTreeNode.m_ImageInfo.sFile), "Delete files", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.No) Then
                 Return
             End If
 
-            IO.File.Delete(sFile)
+            IO.File.Delete(mImageTreeNode.m_ImageInfo.sFile)
 
             'Remove all nodes using this file
             For i = mTreeView.Nodes.Count - 1 To 0 Step -1
@@ -454,7 +454,7 @@
                     Dim mSubNode = mRootNode.Nodes(j)
 
                     Dim sSubNodeFile As String = CType(mSubNode.Tag, String())(0)
-                    If (Not String.Equals(sFile, sSubNodeFile, StringComparison.InvariantCultureIgnoreCase)) Then
+                    If (Not String.Equals(mImageTreeNode.m_ImageInfo.sFile, sSubNodeFile, StringComparison.InvariantCultureIgnoreCase)) Then
                         Continue For
                     End If
 
@@ -467,7 +467,7 @@
                 End If
 
                 Dim sRootNodeFile As String = CType(mRootNode.Tag, String())(0)
-                If (Not String.Equals(sFile, sRootNodeFile, StringComparison.InvariantCultureIgnoreCase)) Then
+                If (Not String.Equals(mImageTreeNode.m_ImageInfo.sFile, sRootNodeFile, StringComparison.InvariantCultureIgnoreCase)) Then
                     Continue For
                 End If
 
@@ -938,7 +938,7 @@
                         mRootTreeNode.Name = mRootFileItem.sFile.ToLowerInvariant
                         mRootTreeNode.Tag = New String() {
                                                         mRootFileItem.sFile,
-                                                        CStr(Math.Ceiling(mRootFileItem.iDifference * 100)),
+                                                        CStr(Math.Floor(mRootFileItem.iDifference * 100)),
                                                         ClassHelpers.FormatBytes(mRootFileItem.iFileSize)}
                         mRootTreeNode.m_ImageInfo = mRootFileItem
                     End If
@@ -951,7 +951,7 @@
                         mSubTreeNode.Name = mSubFileItem.sFile.ToLowerInvariant
                         mSubTreeNode.Tag = New String() {
                                                         mSubFileItem.sFile,
-                                                        CStr(Math.Ceiling(mSubFileItem.iDifference * 100)),
+                                                        CStr(Math.Floor(mSubFileItem.iDifference * 100)),
                                                         ClassHelpers.FormatBytes(mSubFileItem.iFileSize)}
                         mSubTreeNode.m_ImageInfo = mSubFileItem
 
@@ -1179,7 +1179,7 @@
 
                                     If (Not mImageInfo.ContainsKey(sFileA)) Then
                                         mImageInfo(sFileA) = New Dictionary(Of String, STRUC_IMAGE_INFO)
-                                        mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1, New IO.FileInfo(sFileA).Length, sHashA)
+                                        mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1.0, New IO.FileInfo(sFileA).Length, sHashA)
                                     End If
 
                                     mImageInfo(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length, sHashB)
