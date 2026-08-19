@@ -621,6 +621,7 @@
         Private g_mThreadLock As New Object
         Private g_mHashCache As New Dictionary(Of String, Byte())(StringComparer.InvariantCultureIgnoreCase)
         Private g_mHashCacheLock As New Object
+        Private g_bHashCacheChanged As Boolean = False
 
         Public Sub New(_FormMain As FormMain,
                        _Directory As String,
@@ -683,6 +684,7 @@
             Set(value As Byte())
                 SyncLock g_mHashCacheLock
                     g_mHashCache(sFile) = value
+                    g_bHashCacheChanged = True
                 End SyncLock
             End Set
         End Property
@@ -1578,6 +1580,8 @@
             End If
 
             SyncLock g_mHashCacheLock
+                g_mHashCache.Clear()
+
                 Using mStream As New IO.MemoryStream()
                     Using mBinWriter As New IO.BinaryReader(mStream)
                         Using mFileStream As New IO.FileStream(sCacheFile, IO.FileMode.Open, IO.FileAccess.Read)
@@ -1656,6 +1660,8 @@
                         End Using
                     End Using
                 End Using
+
+                g_bHashCacheChanged = False
             End SyncLock
         End Sub
 
@@ -1666,6 +1672,10 @@
             Dim sCacheFile As String = IO.Path.Combine(Application.StartupPath, String.Format("hash_cache_{0}_{1}_{2}.dat", iHashingMethod, iHashSize, If(bHighQualityHashing, 1, 0)))
 
             SyncLock g_mHashCacheLock
+                If (Not g_bHashCacheChanged) Then
+                    Return
+                End If
+
                 Using mStream As New IO.MemoryStream()
                     Using mBinReader As New IO.BinaryWriter(mStream)
                         Using mFileStream As New IO.FileStream(sCacheFile, IO.FileMode.Create, IO.FileAccess.ReadWrite)
