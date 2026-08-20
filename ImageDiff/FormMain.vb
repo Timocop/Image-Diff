@@ -211,12 +211,12 @@
                 End If
 
                 g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of ClassImageTreeNode, Color)(mNode, mNode.BackColor))
-                mNode.BackColor = Color.FromKnownColor(KnownColor.LightGreen)
+                mNode.BackColor = Color.FromKnownColor(KnownColor.PaleGreen)
             Next
 
             If (mParentFileNode IsNot Nothing) Then
                 g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of ClassImageTreeNode, Color)(mParentFileNode, mParentFileNode.BackColor))
-                mParentFileNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+                mParentFileNode.BackColor = Color.FromKnownColor(KnownColor.Yellow)
             End If
         End If
 
@@ -673,7 +673,7 @@
         Private Property m_HashCache(sFile As String) As Byte()
             Get
                 SyncLock g_mHashCacheLock
-                    Dim i = New Byte() {}
+                    Dim i As Byte() = {}
                     If (g_mHashCache.TryGetValue(sFile, i)) Then
                         Return i
                     Else
@@ -935,7 +935,6 @@
                     mFailedFiles.Add(sFile)
                 Next
 
-                Dim mDuplicateFiles = mImageInfo.ToArray
 
                 g_fFormMain.BeginInvoke(Sub()
                                             Try
@@ -954,12 +953,13 @@
 
                 Dim mRootNodeCollection As New ClassImageTreeNode
 
-                For Each mFileItem In mDuplicateFiles
-                    If (mFileItem.Value Is Nothing OrElse mFileItem.Value.Count < 2) Then
+                Dim mImageInfoTotal = mImageInfo.ToArray
+                For Each mInfoItem In mImageInfoTotal
+                    If (mInfoItem.Value Is Nothing OrElse mInfoItem.Value.Count < 2) Then
                         Continue For
                     End If
 
-                    Dim mRootFileItem = mFileItem.Value.Values(0)
+                    Dim mRootFileItem = mInfoItem.Value.Values(0)
 
                     Dim mExistingRootNodes As TreeNode() = mRootNodeCollection.Nodes.Find(mRootFileItem.sFile.ToLowerInvariant, True)
                     Dim bNodeExisted As Boolean = False
@@ -972,7 +972,7 @@
                     Else
                         mRootTreeNode = New ClassImageTreeNode
 
-                        'mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+                        mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
                         mRootTreeNode.Name = mRootFileItem.sFile.ToLowerInvariant
                         mRootTreeNode.Tag = New String() {
                                                         mRootFileItem.sFile,
@@ -982,8 +982,8 @@
                     End If
 
 
-                    For i = 1 To mFileItem.Value.Values.Count - 1
-                        Dim mSubFileItem = mFileItem.Value.Values(i)
+                    For i = 1 To mInfoItem.Value.Values.Count - 1
+                        Dim mSubFileItem = mInfoItem.Value.Values(i)
 
                         Dim mSubTreeNode As New ClassImageTreeNode
                         mSubTreeNode.Name = mSubFileItem.sFile.ToLowerInvariant
@@ -1078,7 +1078,22 @@
 
             Dim MAX_FILE_SIZE As Integer = 100 * 1024 * 1024
 
-            Dim mHashCacheItems As KeyValuePair(Of String, Byte())() = Nothing
+            Dim mHashCacheItems As New Dictionary(Of String, KeyValuePair(Of Integer, Byte()))(StringComparison.InvariantCultureIgnoreCase)
+
+            If (Not bIsPreHashing) Then
+                Dim mCachedItems = GetHashCacheItems(True)
+                For Each mItem In mCachedItems
+                    Dim iPositiveBits As Integer = 0
+
+                    For i = 0 To mItem.Value.Length - 1
+                        If (mItem.Value(i) > 0) Then
+                            iPositiveBits += 1
+                        End If
+                    Next
+
+                    mHashCacheItems(mItem.Key) = New KeyValuePair(Of Integer, Byte())(iPositiveBits, mItem.Value)
+                Next
+            End If
 
             While True
                 Try
@@ -1103,8 +1118,8 @@
                             Continue While
                         End If
 
-                        Dim sHashA As Byte() = m_HashCache(sFileA)
-                        If (sHashA.Length > 0) Then
+                        Dim mHashA As Byte() = m_HashCache(sFileA)
+                        If (mHashA.Length > 0) Then
                             Continue While
                         End If
 
@@ -1160,26 +1175,50 @@
                                 Continue While
                         End Select
                     Else
-                        Dim sHashA As Byte() = m_HashCache(sFileA)
-                        If (sHashA.Length = 0) Then
+                        Dim mHashA As KeyValuePair(Of Integer, Byte()) = Nothing
+                        If (Not mHashCacheItems.TryGetValue(sFileA, mHashA)) Then
                             Continue While
                         End If
 
-                        If (mHashCacheItems Is Nothing) Then
-                            mHashCacheItems = GetHashCacheItems(True)
+                        mHashCacheItems.Remove(sFileA)
+
+                        Dim iHashA As Byte() = mHashA.Value
+                        If (iHashA.Length = 0) Then
+                            Continue While
                         End If
+
+                        Dim iMaxThreshold As Double = (iMaxImageDiff / 100)
 
                         For Each mFileB In mHashCacheItems
                             Try
+                                Dim mHashB = mFileB.Value
                                 Dim sFileB As String = mFileB.Key
 
                                 If (mCancelToken.IsCancellationRequested) Then
                                     Throw New ClassThread.ThreadAbortException
                                 End If
 
-                                Dim sHashB As Byte() = mFileB.Value
-                                If (sHashB.Length = 0) Then
+                                Dim iHashB As Byte() = mHashB.Value
+                                If (iHashB.Length = 0) Then
                                     Continue For
+                                End If
+
+                                ' Check possible thresholds
+                                If (True) Then
+                                    Dim iHashADiff As Double = mHashA.Key / iHashA.Length
+                                    Dim iHashBDiff As Double = mHashB.Key / iHashB.Length
+
+                                    If (iHashADiff > 0 AndAlso iHashADiff > iHashBDiff) Then
+                                        If ((iHashBDiff / iHashADiff) < iMaxThreshold) Then
+                                            Continue For
+                                        End If
+                                    End If
+
+                                    If (iHashBDiff > 0 AndAlso iHashBDiff > iHashADiff) Then
+                                        If ((iHashADiff / iHashBDiff) < iMaxThreshold) Then
+                                            Continue For
+                                        End If
+                                    End If
                                 End If
 
                                 Dim iAvgDiff As Double = 0.0
@@ -1187,21 +1226,21 @@
                                 Select Case (iHashingMethod)
                                     Case ENUM_HASHING_METHOD.SKIA
                                         Dim mHasher As New ClassHasherSkia
-                                        iAvgDiff = mHasher.GetSimilarity(sHashA, sHashB)
+                                        iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
 
                                     Case ENUM_HASHING_METHOD.MAGICK
                                         Dim mHasher As New ClassHasherMagick
-                                        iAvgDiff = mHasher.GetSimilarity(sHashA, sHashB)
+                                        iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
 
                                     Case ENUM_HASHING_METHOD.GDI
                                         Dim mHasher As New ClassHasherGdi
-                                        iAvgDiff = mHasher.GetSimilarity(sHashA, sHashB)
+                                        iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
 
                                     Case Else
                                         Continue For
                                 End Select
 
-                                If (iAvgDiff < (iMaxImageDiff / 100)) Then
+                                If (iAvgDiff < iMaxThreshold) Then
                                     Continue For
                                 End If
 
@@ -1218,10 +1257,10 @@
 
                                     If (Not mImageInfo.ContainsKey(sFileA)) Then
                                         mImageInfo(sFileA) = New Dictionary(Of String, STRUC_IMAGE_INFO)
-                                        mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1.0, New IO.FileInfo(sFileA).Length, sHashA)
+                                        mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1.0, New IO.FileInfo(sFileA).Length, iHashA)
                                     End If
 
-                                    mImageInfo(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length, sHashB)
+                                    mImageInfo(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length, iHashB)
                                 End SyncLock
 
                             Catch ex As ClassThread.ThreadAbortException
@@ -1242,14 +1281,16 @@
         Interface IImageHasher(Of T)
             Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
             Function GetHash(mImage As T, iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
+            Function GetHash(mImage As Byte(), iThumbSize As UInteger, bHighQuality As Boolean) As Byte()
 
             Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double
+            Function GetSimilarity(iHashA As Byte(), iHashB As Byte(), iThreshold As Double) As Double
         End Interface
 
         Class ClassHasherSHA256
-            Implements IImageHasher(Of Byte())
+            Implements IImageHasher(Of Object)
 
-            Public Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Byte()).GetHash
+            Public Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Object).GetHash
                 Using mStream As New IO.FileStream(sFile, IO.FileMode.Open, IO.FileAccess.Read)
                     Using mHash As New Security.Cryptography.SHA256Managed()
                         Return HashToBit(mHash.ComputeHash(mStream))
@@ -1257,7 +1298,11 @@
                 End Using
             End Function
 
-            Public Function GetHash(mImage As Byte(), iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Byte()).GetHash
+            Public Function GetHash(mImage As Object, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Object).GetHash
+                Throw New ArgumentException("Operation not supported")
+            End Function
+
+            Public Function GetHash(mImage As Byte(), iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Object).GetHash
                 Using mStream As New IO.MemoryStream(mImage)
                     Using mHash As New Security.Cryptography.SHA256Managed()
                         Return HashToBit(mHash.ComputeHash(mStream))
@@ -1265,7 +1310,15 @@
                 End Using
             End Function
 
-            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of Byte()).GetSimilarity
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of Object).GetSimilarity
+                Return GetSimilarityInternal(iHashA, iHashB, 1.0)
+            End Function
+
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte(), iThreshold As Double) As Double Implements IImageHasher(Of Object).GetSimilarity
+                Return GetSimilarityInternal(iHashA, iHashB, iThreshold)
+            End Function
+
+            Public Function GetSimilarityInternal(iHashA As Byte(), iHashB As Byte(), iThreshhold As Double) As Double
                 If (iHashA.Length <> iHashB.Length) Then
                     Return 0.0
                 End If
@@ -1313,15 +1366,45 @@
                 Return CalculateHashInternal(mImage, iThumbSize, bHighQuality)
             End Function
 
+            Public Function GetHash(mImage As Byte(), iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of SkiaSharp.SKBitmap).GetHash
+                Using mThumbImage = SkiaSharp.SKBitmap.Decode(mImage)
+                    Return CalculateHashInternal(mThumbImage, iThumbSize, bHighQuality)
+                End Using
+            End Function
+
             Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of SkiaSharp.SKBitmap).GetSimilarity
+                Return GetSimilarityInternal(iHashA, iHashB, 1.0)
+            End Function
+
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte(), iThreshold As Double) As Double Implements IImageHasher(Of SkiaSharp.SKBitmap).GetSimilarity
+                Return GetSimilarityInternal(iHashA, iHashB, iThreshold)
+            End Function
+
+            Public Function GetSimilarityInternal(iHashA As Byte(), iHashB As Byte(), iThreshhold As Double) As Double
                 If (iHashA.Length <> iHashB.Length) Then
                     Return 0.0
                 End If
 
+                Dim iTotalBits As Integer = iHashA.Length
                 Dim iMatchingBits As Integer = 0
+                Dim iMinRequiredMatches As Integer = CInt(Math.Ceiling(iTotalBits * iThreshhold))
+                Dim iMaxAllowedMismatches As Integer = iTotalBits - iMinRequiredMatches
+
                 For i = 0 To iHashA.Length - 1
                     If (iHashA(i) = iHashB(i)) Then
                         iMatchingBits += 1
+                    End If
+
+                    Dim iCount As Integer = i + 1
+                    Dim iCurrentMatches As Integer = iCount - iMatchingBits
+                    Dim iRemainingBits As Integer = iTotalBits - iCount
+
+                    If (iCurrentMatches > iMaxAllowedMismatches) Then
+                        Return 0.0
+                    End If
+
+                    If (iMatchingBits + iRemainingBits < iMinRequiredMatches) Then
+                        Return 0.0
                     End If
                 Next
 
@@ -1433,15 +1516,45 @@
                 End Using
             End Function
 
+            Public Function GetHash(mImage As Byte(), iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of ImageMagick.MagickImage).GetHash
+                Using mThumbImage As New ImageMagick.MagickImage(mImage)
+                    Return CalculateHashInternal(mThumbImage, iThumbSize, bHighQuality)
+                End Using
+            End Function
+
             Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of ImageMagick.MagickImage).GetSimilarity
+                Return GetSimilarityInternal(iHashA, iHashB, 1.0)
+            End Function
+
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte(), iThreshold As Double) As Double Implements IImageHasher(Of ImageMagick.MagickImage).GetSimilarity
+                Return GetSimilarityInternal(iHashA, iHashB, iThreshold)
+            End Function
+
+            Public Function GetSimilarityInternal(iHashA As Byte(), iHashB As Byte(), iThreshhold As Double) As Double
                 If (iHashA.Length <> iHashB.Length) Then
                     Return 0.0
                 End If
 
+                Dim iTotalBits As Integer = iHashA.Length
                 Dim iMatchingBits As Integer = 0
+                Dim iMinRequiredMatches As Integer = CInt(Math.Ceiling(iTotalBits * iThreshhold))
+                Dim iMaxAllowedMismatches As Integer = iTotalBits - iMinRequiredMatches
+
                 For i = 0 To iHashA.Length - 1
                     If (iHashA(i) = iHashB(i)) Then
                         iMatchingBits += 1
+                    End If
+
+                    Dim iCount As Integer = i + 1
+                    Dim iCurrentMatches As Integer = iCount - iMatchingBits
+                    Dim iRemainingBits As Integer = iTotalBits - iCount
+
+                    If (iCurrentMatches > iMaxAllowedMismatches) Then
+                        Return 0.0
+                    End If
+
+                    If (iMatchingBits + iRemainingBits < iMinRequiredMatches) Then
+                        Return 0.0
                     End If
                 Next
 
@@ -1496,8 +1609,8 @@
             Private Shared g_mDrawingLock As New Object
 
             Public Function GetHash(sFile As String, iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Image).GetHash
-                Using mImage As Image = Image.FromFile(sFile)
-                    Return CalculateHashInternal(mImage, iThumbSize, bHighQuality)
+                Using mThumbImage As Image = Image.FromFile(sFile)
+                    Return CalculateHashInternal(mThumbImage, iThumbSize, bHighQuality)
                 End Using
             End Function
 
@@ -1505,15 +1618,47 @@
                 Return CalculateHashInternal(mImage, iThumbSize, bHighQuality)
             End Function
 
+            Public Function GetHash(mImage As Byte(), iThumbSize As UInteger, bHighQuality As Boolean) As Byte() Implements IImageHasher(Of Image).GetHash
+                Using mMemorySteam As New IO.MemoryStream(mImage)
+                    Using mThumbImage As Image = Image.FromStream(mMemorySteam)
+                        Return CalculateHashInternal(mThumbImage, iThumbSize, bHighQuality)
+                    End Using
+                End Using
+            End Function
+
             Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte()) As Double Implements IImageHasher(Of Image).GetSimilarity
+                Return GetSimilarityInternal(iHashA, iHashB, 1.0)
+            End Function
+
+            Public Function GetSimilarity(iHashA As Byte(), iHashB As Byte(), iThreshold As Double) As Double Implements IImageHasher(Of Image).GetSimilarity
+                Return GetSimilarityInternal(iHashA, iHashB, iThreshold)
+            End Function
+
+            Public Function GetSimilarityInternal(iHashA As Byte(), iHashB As Byte(), iThreshhold As Double) As Double
                 If (iHashA.Length <> iHashB.Length) Then
                     Return 0.0
                 End If
 
+                Dim iTotalBits As Integer = iHashA.Length
                 Dim iMatchingBits As Integer = 0
+                Dim iMinRequiredMatches As Integer = CInt(Math.Ceiling(iTotalBits * iThreshhold))
+                Dim iMaxAllowedMismatches As Integer = iTotalBits - iMinRequiredMatches
+
                 For i = 0 To iHashA.Length - 1
                     If (iHashA(i) = iHashB(i)) Then
                         iMatchingBits += 1
+                    End If
+
+                    Dim iCount As Integer = i + 1
+                    Dim iCurrentMatches As Integer = iCount - iMatchingBits
+                    Dim iRemainingBits As Integer = iTotalBits - iCount
+
+                    If (iCurrentMatches > iMaxAllowedMismatches) Then
+                        Return 0.0
+                    End If
+
+                    If (iMatchingBits + iRemainingBits < iMinRequiredMatches) Then
+                        Return 0.0
                     End If
                 Next
 
