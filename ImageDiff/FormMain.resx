@@ -125,7 +125,7 @@
 Magick - Slow, wide range of formats, good multi-threading
 Skia - Fast, good range of image formats, great multi-threading
 
-Skia is recommended</value>
+Skia is recommended.</value>
   </data>
   <metadata name="ContextMenuStrip_Images.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>134, 17</value>

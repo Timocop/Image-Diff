@@ -64,13 +64,13 @@ Partial Class FormMain
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.SplitContainer1 = New System.Windows.Forms.SplitContainer()
+        Me.ClassTreeViewColumns_Images = New ImageDiff.ClassTreeViewColumns()
         Me.SplitContainer2 = New System.Windows.Forms.SplitContainer()
         Me.GroupBox3 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageAPreview = New System.Windows.Forms.PictureBox()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
         Me.PictureBox_ImageBPreview = New System.Windows.Forms.PictureBox()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
-        Me.ClassTreeViewColumns_Images = New ImageDiff.ClassTreeViewColumns()
         Me.ClassListViewEx_FailedFiles = New ImageDiff.ClassListViewEx()
         Me.ColumnHeader11 = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.GroupBox1.SuspendLayout()
@@ -156,8 +156,8 @@ Partial Class FormMain
         Me.CheckBox_Caching.Size = New System.Drawing.Size(105, 17)
         Me.CheckBox_Caching.TabIndex = 11
         Me.CheckBox_Caching.Text = "Use hash cache"
-        Me.ToolTip_Info.SetToolTip(Me.CheckBox_Caching, "When enabled, hashes will be saved and loaded when needed to speed up the hasing " &
-        "process.")
+        Me.ToolTip_Info.SetToolTip(Me.CheckBox_Caching, "When enabled, hashes will be saved and loaded when needed to speed up the hashing" &
+        "  process.")
         Me.CheckBox_Caching.UseVisualStyleBackColor = True
         '
         'ComboBox_HashingQuality
@@ -427,6 +427,17 @@ Partial Class FormMain
         Me.SplitContainer1.SplitterDistance = 486
         Me.SplitContainer1.TabIndex = 4
         '
+        'ClassTreeViewColumns_Images
+        '
+        Me.ClassTreeViewColumns_Images.AutoScroll = True
+        Me.ClassTreeViewColumns_Images.BackColor = System.Drawing.SystemColors.Window
+        Me.ClassTreeViewColumns_Images.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ClassTreeViewColumns_Images.Location = New System.Drawing.Point(0, 0)
+        Me.ClassTreeViewColumns_Images.m_GridView = True
+        Me.ClassTreeViewColumns_Images.Name = "ClassTreeViewColumns_Images"
+        Me.ClassTreeViewColumns_Images.Size = New System.Drawing.Size(486, 460)
+        Me.ClassTreeViewColumns_Images.TabIndex = 0
+        '
         'SplitContainer2
         '
         Me.SplitContainer2.Dock = System.Windows.Forms.DockStyle.Fill
@@ -498,17 +509,6 @@ Partial Class FormMain
         Me.TabPage2.TabIndex = 1
         Me.TabPage2.Text = "Unsupported images"
         Me.TabPage2.UseVisualStyleBackColor = True
-        '
-        'ClassTreeViewColumns_Images
-        '
-        Me.ClassTreeViewColumns_Images.AutoScroll = True
-        Me.ClassTreeViewColumns_Images.BackColor = System.Drawing.SystemColors.Window
-        Me.ClassTreeViewColumns_Images.Dock = System.Windows.Forms.DockStyle.Fill
-        Me.ClassTreeViewColumns_Images.Location = New System.Drawing.Point(0, 0)
-        Me.ClassTreeViewColumns_Images.m_GridView = True
-        Me.ClassTreeViewColumns_Images.Name = "ClassTreeViewColumns_Images"
-        Me.ClassTreeViewColumns_Images.Size = New System.Drawing.Size(486, 460)
-        Me.ClassTreeViewColumns_Images.TabIndex = 0
         '
         'ClassListViewEx_FailedFiles
         '
