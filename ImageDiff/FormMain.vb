@@ -951,6 +951,10 @@
 
                 Dim mImageInfoTotal = mImageInfo.ToArray
                 For Each mInfoItem In mImageInfoTotal
+                    If (mCancelToken.IsCancellationRequested) Then
+                        Throw New ClassThread.ThreadAbortException
+                    End If
+
                     If (mInfoItem.Value Is Nothing OrElse mInfoItem.Value.Count < 2) Then
                         Continue For
                     End If
@@ -985,8 +989,16 @@
                     mRootNodeCollection.Nodes.Add(mRootTreeNode)
                 Next
 
+                If (mCancelToken.IsCancellationRequested) Then
+                    Throw New ClassThread.ThreadAbortException
+                End If
+
                 ClassHelpers.ClassTreeNodes.CompactNodeCollection(mRootNodeCollection.Nodes)
                 ClassHelpers.ClassTreeNodes.SortNodeCollection(mRootNodeCollection.Nodes)
+
+                If (mCancelToken.IsCancellationRequested) Then
+                    Throw New ClassThread.ThreadAbortException
+                End If
 
                 g_fFormMain.BeginInvoke(Sub()
                                             g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Visible = False
