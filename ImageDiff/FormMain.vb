@@ -147,10 +147,6 @@
                 Return
             End If
 
-            Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
-
-            mTreeView.SelectedNode = e.Node
-
             Dim mImageTreeNode = DirectCast(e.Node, ClassImageTreeNode)
             If (Not IO.File.Exists(mImageTreeNode.m_ImageInfo.sFile)) Then
                 Return
