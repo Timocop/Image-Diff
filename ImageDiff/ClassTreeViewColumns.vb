@@ -13,9 +13,8 @@
 
     Public Property m_GridView As Boolean
 
-    Private Sub TreeView1_Click(sender As Object, e As EventArgs) Handles TreeView1.Click
-        Dim mPoint As Point = TreeView1.PointToClient(Control.MousePosition)
-        Dim mTreeNode As TreeNode = TreeView1.GetNodeAt(mPoint)
+    Private Sub TreeView1_Click(sender As Object, e As MouseEventArgs) Handles TreeView1.MouseClick
+        Dim mTreeNode As TreeNode = TreeView1.GetNodeAt(e.Location)
         If (mTreeNode Is Nothing) Then
             Return
         End If

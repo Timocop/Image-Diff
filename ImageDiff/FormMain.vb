@@ -103,7 +103,6 @@
 
         AddHandler ClassTreeViewColumns_Images.m_TreeView.AfterSelect, AddressOf TreeView_AfterNode
         AddHandler ClassTreeViewColumns_Images.m_TreeView.NodeMouseDoubleClick, AddressOf TreeView_NodeMouseDoubleClick
-        AddHandler ClassTreeViewColumns_Images.m_TreeView.NodeMouseClick, AddressOf TreeView_MouseClick
 
         NumericUpDown_Threads.Minimum = 1
         NumericUpDown_Threads.Maximum = 64
@@ -142,16 +141,6 @@
         ImageMagick.OpenCL.IsEnabled = False
     End Sub
 
-    Private Sub TreeView_MouseClick(sender As Object, e As TreeNodeMouseClickEventArgs)
-        If (e.Node Is Nothing) Then
-            Return
-        End If
-
-        Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
-
-        mTreeView.SelectedNode = e.Node
-    End Sub
-
     Private Sub TreeView_NodeMouseDoubleClick(sender As Object, e As TreeNodeMouseClickEventArgs)
         Try
             If (e.Node Is Nothing) Then
@@ -181,7 +170,6 @@
         End Try
     End Sub
 
-    Private g_mPreviousSelectedColoredNodes As New List(Of KeyValuePair(Of ClassImageTreeNode, Color))
     Private Sub ShowPreviewFromNode(mSelectedNode As TreeNode)
         Dim mTreeView = ClassTreeViewColumns_Images.m_TreeView
         Dim mFileNode = DirectCast(mSelectedNode, ClassImageTreeNode)
@@ -189,39 +177,16 @@
 
         Dim iDifferenceAlpha As Single = DirectCast(ToolStripComboBox_ShowDiffPreview.SelectedItem, STRUC_DIFF_MARKING_ITEM).iAlpha
 
-        For Each mNodePair As KeyValuePair(Of ClassImageTreeNode, Color) In g_mPreviousSelectedColoredNodes
-            If (mNodePair.Key Is Nothing) Then
-                Continue For
-            End If
-
-            mNodePair.Key.BackColor = mNodePair.Value
-        Next
-        g_mPreviousSelectedColoredNodes.Clear()
+        ResetTreeNodeColor()
 
         If (mFileNode Is Nothing) Then
             Return
         End If
 
-        If (True) Then
-            Dim mFoundNodes = mTreeView.Nodes.Find(mFileNode.m_ImageInfo.sFile.ToLowerInvariant, True)
-
-            For Each mNode As ClassImageTreeNode In mFoundNodes
-                If (mFileNode Is mNode) Then
-                    Continue For
-                End If
-
-                g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of ClassImageTreeNode, Color)(mNode, mNode.BackColor))
-                mNode.BackColor = Color.FromKnownColor(KnownColor.PaleGreen)
-            Next
-
-            If (mParentFileNode IsNot Nothing) Then
-                g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of ClassImageTreeNode, Color)(mParentFileNode, mParentFileNode.BackColor))
-                mParentFileNode.BackColor = Color.FromKnownColor(KnownColor.Yellow)
-            End If
-        End If
-
         ' Show preview 
         If (mFileNode IsNot Nothing) Then
+            SetTreeNodeColor(mFileNode.m_ImageInfo.sFile, Color.FromKnownColor(KnownColor.PaleGreen))
+
             If (IO.File.Exists(mFileNode.m_ImageInfo.sFile)) Then
                 Try
                     Using i As New Bitmap(mFileNode.m_ImageInfo.sFile)
@@ -252,6 +217,8 @@
         End If
 
         If (mParentFileNode IsNot Nothing) Then
+            SetTreeNodeColor(mParentFileNode, Color.FromKnownColor(KnownColor.Yellow))
+
             If (IO.File.Exists(mParentFileNode.m_ImageInfo.sFile)) Then
                 Try
                     Using i As New Bitmap(mParentFileNode.m_ImageInfo.sFile)
@@ -448,34 +415,21 @@
                 Return
             End If
 
+            Dim mDuplicateNodes = mTreeView.Nodes.Find(mImageTreeNode.m_ImageInfo.sFile.ToLowerInvariant, True)
+            If (mDuplicateNodes.Length > 1) Then
+                If (MessageBox.Show(String.Format("File {0} has {1} more entries. Do you want to continue?", mImageTreeNode.m_ImageInfo.sFile, mDuplicateNodes.Length - 1), "Delete files", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.No) Then
+                    Return
+                End If
+            End If
+
             IO.File.Delete(mImageTreeNode.m_ImageInfo.sFile)
 
             'Remove all nodes using this file
-            For i = mTreeView.Nodes.Count - 1 To 0 Step -1
-                Dim mRootNode = mTreeView.Nodes(i)
+            For i = 0 To mDuplicateNodes.Length - 1
+                Dim mNode = mDuplicateNodes(i)
 
-                For j = mRootNode.Nodes.Count - 1 To 0 Step -1
-                    Dim mSubNode = mRootNode.Nodes(j)
-
-                    Dim sSubNodeFile As String = CType(mSubNode.Tag, String())(0)
-                    If (Not String.Equals(mImageTreeNode.m_ImageInfo.sFile, sSubNodeFile, StringComparison.InvariantCultureIgnoreCase)) Then
-                        Continue For
-                    End If
-
-                    mRootNode.Nodes.RemoveAt(j)
-                Next
-
-                If (mRootNode.Nodes.Count < 1) Then
-                    mTreeView.Nodes.RemoveAt(i)
-                    Continue For
-                End If
-
-                Dim sRootNodeFile As String = CType(mRootNode.Tag, String())(0)
-                If (Not String.Equals(mImageTreeNode.m_ImageInfo.sFile, sRootNodeFile, StringComparison.InvariantCultureIgnoreCase)) Then
-                    Continue For
-                End If
-
-                mTreeView.Nodes.RemoveAt(i)
+                ResetTreeNodeColor(mNode)
+                mNode.BackColor = Color.FromKnownColor(KnownColor.PaleVioletRed)
             Next
         Catch ex As Exception
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -606,6 +560,44 @@
                 Next
             End Using
         End Using
+    End Sub
+
+    Private g_mPreviousSelectedColoredNodes As New List(Of KeyValuePair(Of TreeNode, Color))
+    Public Sub ResetTreeNodeColor()
+        For Each mNodePair As KeyValuePair(Of TreeNode, Color) In g_mPreviousSelectedColoredNodes
+            If (mNodePair.Key Is Nothing) Then
+                Continue For
+            End If
+
+            mNodePair.Key.BackColor = mNodePair.Value
+        Next
+        g_mPreviousSelectedColoredNodes.Clear()
+    End Sub
+
+    Public Sub ResetTreeNodeColor(mNode As TreeNode)
+        For i = g_mPreviousSelectedColoredNodes.Count - 1 To 0 Step -1
+            Dim mNodePair = g_mPreviousSelectedColoredNodes(i)
+
+            If (mNodePair.Key.Name <> mNode.Name) Then
+                Continue For
+            End If
+
+            mNodePair.Key.BackColor = mNodePair.Value
+            g_mPreviousSelectedColoredNodes.RemoveAt(i)
+        Next
+    End Sub
+
+    Public Sub SetTreeNodeColor(sFile As String, mColor As Color)
+        Dim mFoundNodes = ClassTreeViewColumns_Images.m_TreeView.Nodes.Find(sFile.ToLowerInvariant, True)
+
+        For Each mNode As TreeNode In mFoundNodes
+            SetTreeNodeColor(mNode, mColor)
+        Next
+    End Sub
+
+    Public Sub SetTreeNodeColor(mNode As TreeNode, mColor As Color)
+        g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of TreeNode, Color)(mNode, mNode.BackColor))
+        mNode.BackColor = mColor
     End Sub
 
     Class ClassScanner
@@ -2130,7 +2122,6 @@
     Private Sub CleanUp()
         RemoveHandler ClassTreeViewColumns_Images.m_TreeView.AfterSelect, AddressOf TreeView_AfterNode
         RemoveHandler ClassTreeViewColumns_Images.m_TreeView.NodeMouseDoubleClick, AddressOf TreeView_NodeMouseDoubleClick
-        RemoveHandler ClassTreeViewColumns_Images.m_TreeView.NodeMouseClick, AddressOf TreeView_MouseClick
 
         If (g_ClassScanner IsNot Nothing) Then
             g_ClassScanner.Abort()
