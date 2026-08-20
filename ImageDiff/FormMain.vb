@@ -596,6 +596,10 @@
     End Sub
 
     Public Sub SetTreeNodeColor(mNode As TreeNode, mColor As Color)
+        If (mNode.IsSelected) Then
+            Return
+        End If
+
         g_mPreviousSelectedColoredNodes.Add(New KeyValuePair(Of TreeNode, Color)(mNode, mNode.BackColor))
         mNode.BackColor = mColor
     End Sub
