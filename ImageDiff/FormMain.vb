@@ -305,7 +305,11 @@
             Return
         End If
 
-        If (MessageBox.Show(String.Format("Do you really want to clear all hash caches?\nTotal cache size: {0}", ClassHelpers.FormatBytes(iTotalSize)).Replace("\n", Environment.NewLine), "Clear hash cache", MessageBoxButtons.YesNo, MessageBoxIcon.Question) <> DialogResult.Yes) Then
+        If (MessageBox.Show(String.Format("Do you really want to clear all hash caches?\nTotal cache size: {0}",
+                                          ClassHelpers.ClassFormating.FormatBytes(iTotalSize)).Replace("\n", Environment.NewLine),
+                            "Clear hash cache",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question) <> DialogResult.Yes) Then
             Return
         End If
 
@@ -961,25 +965,15 @@
 
                     Dim mRootFileItem = mInfoItem.Value.Values(0)
 
-                    Dim mExistingRootNodes As TreeNode() = mRootNodeCollection.Nodes.Find(mRootFileItem.sFile.ToLowerInvariant, True)
-                    Dim bNodeExisted As Boolean = False
+                    Dim mRootTreeNode As New ClassImageTreeNode
 
-                    Dim mRootTreeNode As ClassImageTreeNode
-
-                    If (mExistingRootNodes IsNot Nothing AndAlso mExistingRootNodes.Length > 0) Then
-                        mRootTreeNode = DirectCast(mExistingRootNodes(0), ClassImageTreeNode)
-                        bNodeExisted = True
-                    Else
-                        mRootTreeNode = New ClassImageTreeNode
-
-                        mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
-                        mRootTreeNode.Name = mRootFileItem.sFile.ToLowerInvariant
-                        mRootTreeNode.Tag = New String() {
+                    mRootTreeNode.BackColor = Color.FromKnownColor(KnownColor.GradientActiveCaption)
+                    mRootTreeNode.Name = mRootFileItem.sFile.ToLowerInvariant
+                    mRootTreeNode.Tag = New String() {
                                                         mRootFileItem.sFile,
                                                         String.Format("{0} %", CStr(Math.Floor(mRootFileItem.iDifference * 100))),
-                                                        ClassHelpers.FormatBytes(mRootFileItem.iFileSize)}
-                        mRootTreeNode.m_ImageInfo = mRootFileItem
-                    End If
+                                                        ClassHelpers.ClassFormating.FormatBytes(mRootFileItem.iFileSize)}
+                    mRootTreeNode.m_ImageInfo = mRootFileItem
 
 
                     For i = 1 To mInfoItem.Value.Values.Count - 1
@@ -990,18 +984,17 @@
                         mSubTreeNode.Tag = New String() {
                                                         mSubFileItem.sFile,
                                                         String.Format("{0} %", CStr(Math.Floor(mSubFileItem.iDifference * 100))),
-                                                        ClassHelpers.FormatBytes(mSubFileItem.iFileSize)}
+                                                        ClassHelpers.ClassFormating.FormatBytes(mSubFileItem.iFileSize)}
                         mSubTreeNode.m_ImageInfo = mSubFileItem
 
                         mRootTreeNode.Nodes.Add(mSubTreeNode)
                     Next
 
-                    If (Not bNodeExisted) Then
-                        mRootNodeCollection.Nodes.Add(mRootTreeNode)
-                    End If
+                    mRootNodeCollection.Nodes.Add(mRootTreeNode)
                 Next
 
-                SortNodeCollection(mRootNodeCollection.Nodes)
+                ClassHelpers.ClassTreeNodes.CompactNodeCollection(mRootNodeCollection.Nodes)
+                ClassHelpers.ClassTreeNodes.SortNodeCollection(mRootNodeCollection.Nodes)
 
                 g_fFormMain.BeginInvoke(Sub()
                                             g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Visible = False
@@ -1041,26 +1034,6 @@
 
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.Button_Select.Text = "Select")
             End Try
-        End Sub
-
-        Private Sub SortNodeCollection(mNodes As TreeNodeCollection)
-            If (mNodes.Count > 0) Then
-                Dim mSortedNodes As New List(Of ClassImageTreeNode)
-                For Each mNode As ClassImageTreeNode In mNodes
-                    mSortedNodes.Add(mNode)
-                Next
-
-                mSortedNodes.Sort(Function(x As ClassImageTreeNode, y As ClassImageTreeNode)
-                                      Return y.m_ImageInfo.iDifference.CompareTo(x.m_ImageInfo.iDifference)
-                                  End Function)
-
-                mNodes.Clear()
-                For Each mNode As ClassImageTreeNode In mSortedNodes
-                    mNodes.Add(mNode)
-
-                    SortNodeCollection(mNode.Nodes)
-                Next
-            End If
         End Sub
 
         Private Sub ThreadSubScanner(mCancelToken As Threading.CancellationTokenSource, mObject As Object)
@@ -1985,18 +1958,169 @@
     End Class
 
     Class ClassHelpers
-        Public Shared Function FormatBytes(lBytes As Double) As String
-            Try
-                Dim aPosForm() As String = {"Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
-                For i As Integer = aPosForm.Length - 1 To 0 Step -1
-                    If lBytes > 1024 ^ i Then
-                        lBytes = lBytes / (1024 ^ i)
-                        Return lBytes.ToString("0.00") & " " & aPosForm(i)
+        Class ClassFormating
+            Public Shared Function FormatBytes(lBytes As Double) As String
+                Try
+                    Dim aPosForm() As String = {"Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
+                    For i = aPosForm.Length - 1 To 0 Step -1
+                        If lBytes > 1024 ^ i Then
+                            lBytes = lBytes / (1024 ^ i)
+                            Return lBytes.ToString("0.00") & " " & aPosForm(i)
+                        End If
+                    Next
+                Catch ex As Exception
+                End Try
+
+                Return lBytes.ToString("N") & " Bytes"
+            End Function
+        End Class
+
+        Class ClassTreeNodes
+            Public Shared Sub CompactNodeCollection(mNodes As TreeNodeCollection)
+                If (mNodes.Count < 1) Then
+                    Return
+                End If
+
+                Dim mAllNodes As New List(Of TreeNode)
+                For Each node As TreeNode In mNodes
+                    mAllNodes.Add(node)
+                Next
+
+                For i = 0 To mAllNodes.Count - 1
+                    Dim mCurrentNode As TreeNode = mAllNodes(i)
+
+                    If (mCurrentNode Is Nothing) Then
+                        Continue For
                     End If
-                Next i
-            Catch : End Try
-            Return lBytes.ToString("N") & " Bytes"
-        End Function
+
+                    ' If we are the only parents node, ignore
+                    If (mCurrentNode.Parent IsNot Nothing AndAlso mCurrentNode.Parent.Nodes.Count = 1) Then
+                        Continue For
+                    End If
+
+                    Dim mRootNode As TreeNode = GetRootNode(mCurrentNode)
+                    If (mRootNode Is Nothing) Then
+                        Continue For
+                    End If
+
+                    Dim mFoundNodes As New List(Of TreeNode)
+                    FindNodesByName(mRootNode, mCurrentNode.Name, mFoundNodes)
+
+                    ' Skep when none or itself is found
+                    If (mFoundNodes.Count <= 1) Then
+                        Continue For
+                    End If
+
+                    Dim mTargetNode As TreeNode = Nothing
+                    For Each mFoundNode As TreeNode In mFoundNodes
+                        If (mFoundNode Is mCurrentNode) Then
+                            Continue For
+                        End If
+
+                        ' Avoid circular references
+                        If (IsAncestorOf(mCurrentNode, mFoundNode)) Then
+                            Continue For
+                        End If
+
+                        mTargetNode = mFoundNode
+                        Exit For
+                    Next
+
+                    If (mTargetNode Is Nothing) Then
+                        Continue For
+                    End If
+
+                    Dim mNodesToMove As New List(Of TreeNode)
+                    For Each mNode As TreeNode In mCurrentNode.Nodes
+                        mNodesToMove.Add(mNode)
+                    Next
+
+                    For Each mNode As TreeNode In mNodesToMove
+                        mNode.Remove()
+                        mTargetNode.Nodes.Add(mNode)
+                    Next
+
+                    mCurrentNode.Remove()
+                Next
+
+                For Each mNode As TreeNode In mNodes
+                    If (mNode Is Nothing) Then
+                        Continue For
+                    End If
+
+                    If (mNode.Nodes.Count < 1) Then
+                        Continue For
+                    End If
+
+                    CompactNodeCollection(mNode.Nodes)
+                Next
+            End Sub
+
+            Private Shared Function GetRootNode(mNode As TreeNode) As TreeNode
+                If (mNode Is Nothing) Then
+                    Return Nothing
+                End If
+
+                Dim mCurrentNode As TreeNode = mNode
+
+                While (mCurrentNode.Parent IsNot Nothing)
+                    mCurrentNode = mCurrentNode.Parent
+                End While
+
+                Return mCurrentNode
+            End Function
+
+            Private Shared Function IsAncestorOf(mAncestor As TreeNode, mDescendant As TreeNode) As Boolean
+                Dim mCurrentNode As TreeNode = mDescendant.Parent
+
+                While (mCurrentNode IsNot Nothing)
+                    If (mCurrentNode Is mAncestor) Then
+                        Return True
+                    End If
+
+                    mCurrentNode = mCurrentNode.Parent
+                End While
+
+                Return False
+            End Function
+
+            Private Shared Sub FindNodesByName(mRootNode As TreeNode, sName As String, mFoundNodes As List(Of TreeNode))
+                If (mRootNode Is Nothing) Then
+                    Return
+                End If
+
+                If (mRootNode.Name = sName) Then
+                    mFoundNodes.Add(mRootNode)
+                End If
+
+                For Each mNode As TreeNode In mRootNode.Nodes
+                    FindNodesByName(mNode, sName, mFoundNodes)
+                Next
+            End Sub
+
+            Public Shared Sub SortNodeCollection(mNodes As TreeNodeCollection)
+                If (mNodes.Count < 1) Then
+                    Return
+                End If
+
+                Dim mSortedNodes As New List(Of ClassImageTreeNode)
+                For Each mNode As ClassImageTreeNode In mNodes
+                    mSortedNodes.Add(mNode)
+                Next
+
+                mSortedNodes.Sort(Function(x As ClassImageTreeNode, y As ClassImageTreeNode)
+                                      Return y.m_ImageInfo.iDifference.CompareTo(x.m_ImageInfo.iDifference)
+                                  End Function)
+
+                mNodes.Clear()
+                For Each mNode As ClassImageTreeNode In mSortedNodes
+                    mNodes.Add(mNode)
+
+                    SortNodeCollection(mNode.Nodes)
+                Next
+            End Sub
+
+        End Class
     End Class
 
     Private Sub FormMain_FormClosed(sender As Object, e As FormClosedEventArgs) Handles Me.FormClosed
