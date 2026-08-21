@@ -603,7 +603,7 @@
     Class ClassScanner
         Private g_fFormMain As FormMain
 
-        Private g_mScannerThread As ClassThread
+        Private g_mScannerThread As Threading.Thread = Nothing
 
         Property m_Directory As String
         Property m_IncludeSubDirectories As Boolean
@@ -644,7 +644,8 @@
                 Return
             End If
 
-            g_mScannerThread = New ClassThread(AddressOf ThreadMainScanner, Nothing)
+            g_mScannerThread = New Threading.Thread(AddressOf ThreadMainScanner)
+            g_mScannerThread.IsBackground = True
             g_mScannerThread.Start()
         End Sub
 
@@ -721,63 +722,7 @@
             End SyncLock
         End Function
 
-        Class ClassThread
-            Private g_mThread As Threading.Thread = Nothing
-            Private ReadOnly g_mCancelToken As New Threading.CancellationTokenSource
-
-            Public Delegate Sub ThreadAction(mCancelToken As Threading.CancellationTokenSource, mObject As Object)
-
-            Public Sub New(mThreadAction As ThreadAction, mObject As Object)
-                g_mThread = New Threading.Thread(Sub()
-                                                     Try
-                                                         mThreadAction.Invoke(g_mCancelToken, mObject)
-                                                     Catch ex As ThreadAbortException
-                                                     Catch ex As Exception
-                                                     End Try
-                                                 End Sub)
-                g_mThread.IsBackground = True
-            End Sub
-
-            Public Sub Start()
-                If (g_mThread Is Nothing) Then
-                    Return
-                End If
-
-                g_mThread.Start()
-            End Sub
-
-            Public Sub Abort()
-                If (g_mThread Is Nothing) Then
-                    Return
-                End If
-
-                g_mCancelToken.Cancel()
-            End Sub
-
-            Public Sub Join()
-                If (g_mThread Is Nothing) Then
-                    Return
-                End If
-
-                g_mCancelToken.Cancel()
-
-                g_mThread.Join()
-            End Sub
-
-            Public Function IsAlive() As Boolean
-                If (g_mThread Is Nothing) Then
-                    Return False
-                End If
-
-                Return g_mThread.IsAlive
-            End Function
-
-            Class ThreadAbortException
-                Inherits ArgumentException
-            End Class
-        End Class
-
-        Private Sub ThreadMainScanner(mCancelToken As Threading.CancellationTokenSource, mObject As Object)
+        Private Sub ThreadMainScanner()
             Try
                 Dim sDirectory As String = m_Directory
                 Dim bIncludeSubDirectories As Boolean = m_IncludeSubDirectories
@@ -798,10 +743,10 @@
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripProgressBar_Progress.Visible = True)
 
                 Dim sFiles = IO.Directory.GetFiles(sDirectory, "*.*", If(bIncludeSubDirectories, IO.SearchOption.AllDirectories, IO.SearchOption.TopDirectoryOnly))
-                Dim mImageInfo As New Dictionary(Of String, Dictionary(Of String, STRUC_IMAGE_INFO))(StringComparison.InvariantCultureIgnoreCase)
-                Dim mThreads As New List(Of ClassThread)
-                Dim mFilesThreads As New Queue(Of String)
-                Dim mThreadInfo As New Dictionary(Of String, Object)
+                Dim mImagePairs As New Dictionary(Of String, Dictionary(Of String, STRUC_IMAGE_INFO))(StringComparison.InvariantCultureIgnoreCase)
+                Dim mThreads As New List(Of KeyValuePair(Of Object, Threading.Thread))
+                Dim mFilesQueue As New Queue(Of String)
+                Dim mThreadData As New Dictionary(Of String, Object)
 
                 Dim mTimeTaken As New Stopwatch
                 mTimeTaken.Start()
@@ -828,7 +773,7 @@
 
                                             SaveCache()
                                     End Select
-                                Catch ex As ClassThread.ThreadAbortException
+                                Catch ex As Threading.ThreadAbortException
                                     Throw
                                 Catch ex As Exception
                                     MessageBox.Show(ex.Message, "Unable to use save/load hash cache", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -836,43 +781,43 @@
                             End If
 
                             SyncLock g_mThreadLock
-                                mThreadInfo("Files") = 0
+                                mThreadData("Files") = 0
                             End SyncLock
 
                             For i = 0 To sFiles.Length - 1
-                                mFilesThreads.Enqueue(sFiles(i))
+                                mFilesQueue.Enqueue(sFiles(i))
                             Next
 
                             For i = 0 To iThreads - 1
                                 Dim mData As New Dictionary(Of String, Object)
-                                mData("FilesThreads") = mFilesThreads
-                                mData("TotalFiles") = sFiles
-                                mData("ImageInfo") = mImageInfo
-                                mData("ThreadInfo") = mThreadInfo
+                                Dim mSafeRegionLock As New Object
+
+                                mData("FilesQueue") = mFilesQueue
+                                mData("ImagePairs") = mImagePairs
+                                mData("ThreadData") = mThreadData
+                                mData("SafeRegionLock") = mSafeRegionLock
+
 
                                 mData("MaxImageDiff") = iMaxImageDiff
                                 mData("IsPreHashing") = (j = 0)
                                 mData("HashingMethod") = iHashingMethod
                                 mData("ThumbSize") = iThumbSize
 
-                                Dim mThread As New ClassThread(AddressOf ThreadSubScanner, mData)
-                                mThread.Start()
+                                Dim mThread As New Threading.Thread(AddressOf ThreadSubScanner)
+                                mThread.IsBackground = True
+                                mThread.Start(mData)
 
-                                mThreads.Add(mThread)
+                                mThreads.Add(New KeyValuePair(Of Object, Threading.Thread)(mSafeRegionLock, mThread))
                             Next
 
                             Try
                                 While True
-                                    If (mCancelToken.IsCancellationRequested) Then
-                                        Throw New ClassThread.ThreadAbortException
-                                    End If
-
                                     Threading.Thread.Sleep(1000)
 
                                     Dim iFiles As Integer
 
                                     SyncLock g_mThreadLock
-                                        iFiles = CInt(mThreadInfo("Files"))
+                                        iFiles = CInt(mThreadData("Files"))
                                     End SyncLock
 
                                     ' Calculate time left and rate per seconds
@@ -897,25 +842,29 @@
                                                                                                                                  CInt(Math.Floor((iFiles / sFiles.Length) * 100))))
 
                                     For Each mThread In mThreads
-                                        If (mThread.IsAlive) Then
+                                        If (mThread.Value.IsAlive) Then
                                             Continue While
                                         End If
                                     Next
 
                                     Exit While
                                 End While
-                            Catch ex As ClassThread.ThreadAbortException
+                            Catch ex As Threading.ThreadAbortException
                                 Throw
                             End Try
                         Next
                     End If
                 Finally
                     For Each mThread In mThreads
-                        mThread.Abort()
+                        ' Avoid aborting at unsafe regions.
+                        ' Skia for example uses its own locking. This does not work with unsafe aborting causing dead-locks.
+                        SyncLock mThread.Key
+                            mThread.Value.Abort()
+                        End SyncLock
                     Next
 
                     For Each mThread In mThreads
-                        mThread.Join()
+                        mThread.Value.Join()
                     Next
                 End Try
 
@@ -949,12 +898,8 @@
 
                 Dim mRootNodeCollection As New ClassImageTreeNode
 
-                Dim mImageInfoTotal = mImageInfo.ToArray
+                Dim mImageInfoTotal = mImagePairs.ToArray
                 For Each mInfoItem In mImageInfoTotal
-                    If (mCancelToken.IsCancellationRequested) Then
-                        Throw New ClassThread.ThreadAbortException
-                    End If
-
                     If (mInfoItem.Value Is Nothing OrElse mInfoItem.Value.Count < 2) Then
                         Continue For
                     End If
@@ -989,16 +934,8 @@
                     mRootNodeCollection.Nodes.Add(mRootTreeNode)
                 Next
 
-                If (mCancelToken.IsCancellationRequested) Then
-                    Throw New ClassThread.ThreadAbortException
-                End If
-
                 ClassHelpers.ClassTreeNodes.CompactNodeCollection(mRootNodeCollection.Nodes)
                 ClassHelpers.ClassTreeNodes.SortNodeCollection(mRootNodeCollection.Nodes)
-
-                If (mCancelToken.IsCancellationRequested) Then
-                    Throw New ClassThread.ThreadAbortException
-                End If
 
                 g_fFormMain.BeginInvoke(Sub()
                                             g_fFormMain.ClassTreeViewColumns_Images.m_TreeView.Visible = False
@@ -1023,7 +960,7 @@
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripProgressBar_Progress.Visible = False)
 
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.Button_Select.Text = "Select")
-            Catch ex As ClassThread.ThreadAbortException
+            Catch ex As Threading.ThreadAbortException
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripStatusLabel_Progress.Visible = False)
                 g_fFormMain.BeginInvoke(Sub() g_fFormMain.ToolStripProgressBar_Progress.Visible = False)
 
@@ -1040,219 +977,235 @@
             End Try
         End Sub
 
-        Private Sub ThreadSubScanner(mCancelToken As Threading.CancellationTokenSource, mObject As Object)
-            Dim mData = DirectCast(mObject, Dictionary(Of String, Object))
+        Private Sub ThreadSubScanner(mObject As Object)
+            Try
+                Dim mData = DirectCast(mObject, Dictionary(Of String, Object))
 
-            Dim mFilesThreads = DirectCast(mData("FilesThreads"), Queue(Of String))
-            Dim sTotalFiles = DirectCast(mData("TotalFiles"), String())
-            Dim mImageInfo = DirectCast(mData("ImageInfo"), Dictionary(Of String, Dictionary(Of String, STRUC_IMAGE_INFO)))
-            Dim mThreadInfo = DirectCast(mData("ThreadInfo"), Dictionary(Of String, Object))
+                Dim mFilesQueue = DirectCast(mData("FilesQueue"), Queue(Of String))
+                Dim mImagePairs = DirectCast(mData("ImagePairs"), Dictionary(Of String, Dictionary(Of String, STRUC_IMAGE_INFO)))
+                Dim mThreadData = DirectCast(mData("ThreadData"), Dictionary(Of String, Object))
+                Dim mSafeRegionLock = DirectCast(mData("SafeRegionLock"), Object)
 
-            Dim iMaxImageDiff = DirectCast(mData("MaxImageDiff"), Integer)
-            Dim bIsPreHashing = DirectCast(mData("IsPreHashing"), Boolean)
-            Dim iHashingMethod = DirectCast(mData("HashingMethod"), ENUM_HASHING_METHOD)
-            Dim iThumbSize = DirectCast(mData("ThumbSize"), Integer)
+                Dim iMaxImageDiff = DirectCast(mData("MaxImageDiff"), Integer)
+                Dim bIsPreHashing = DirectCast(mData("IsPreHashing"), Boolean)
+                Dim iHashingMethod = DirectCast(mData("HashingMethod"), ENUM_HASHING_METHOD)
+                Dim iThumbSize = DirectCast(mData("ThumbSize"), Integer)
 
-            Dim MAX_FILE_SIZE As Integer = 100 * 1024 * 1024
+                Dim MAX_FILE_SIZE As Integer = 100 * 1024 * 1024
 
-            Dim mHashCacheItems As New Dictionary(Of String, KeyValuePair(Of Integer, Byte()))(StringComparison.InvariantCultureIgnoreCase)
+                Dim mHashCacheItems As New Dictionary(Of String, KeyValuePair(Of Integer, Byte()))(StringComparison.InvariantCultureIgnoreCase)
 
-            If (Not bIsPreHashing) Then
-                Dim mCachedItems = GetHashCacheItems(True)
-                For Each mItem In mCachedItems
-                    Dim iPositiveBits As Integer = 0
+                If (Not bIsPreHashing) Then
+                    Dim mCachedItems = GetHashCacheItems(True)
+                    For Each mItem In mCachedItems
+                        Dim iPositiveBits As Integer = 0
 
-                    For i = 0 To mItem.Value.Length - 1
-                        If (mItem.Value(i) > 0) Then
-                            iPositiveBits += 1
-                        End If
+                        For i = 0 To mItem.Value.Length - 1
+                            If (mItem.Value(i) > 0) Then
+                                iPositiveBits += 1
+                            End If
+                        Next
+
+                        mHashCacheItems(mItem.Key) = New KeyValuePair(Of Integer, Byte())(iPositiveBits, mItem.Value)
                     Next
+                End If
 
-                    mHashCacheItems(mItem.Key) = New KeyValuePair(Of Integer, Byte())(iPositiveBits, mItem.Value)
-                Next
-            End If
+                While True
+                    Try
+                        Dim sFileA As String
 
-            While True
-                Try
-                    Dim sFileA As String
+                        SyncLock g_mThreadLock
+                            If (mFilesQueue.Count < 1) Then
+                                Exit While
+                            End If
 
-                    SyncLock g_mThreadLock
-                        If (mFilesThreads.Count < 1) Then
-                            Exit While
-                        End If
+                            sFileA = mFilesQueue.Dequeue()
 
-                        sFileA = mFilesThreads.Dequeue()
+                            mThreadData("Files") = CInt(mThreadData("Files")) + 1
+                        End SyncLock
 
-                        mThreadInfo("Files") = CInt(mThreadInfo("Files")) + 1
-                    End SyncLock
+                        If (bIsPreHashing) Then
+                            If (Not IO.File.Exists(sFileA)) Then
+                                Continue While
+                            End If
 
-                    If (mCancelToken.IsCancellationRequested) Then
-                        Throw New ClassThread.ThreadAbortException
-                    End If
+                            Dim mHashA As Byte() = m_HashCache(sFileA)
+                            If (mHashA.Length > 0) Then
+                                Continue While
+                            End If
 
-                    If (bIsPreHashing) Then
-                        If (Not IO.File.Exists(sFileA)) Then
-                            Continue While
-                        End If
+                            Dim mFileAInfo As New IO.FileInfo(sFileA)
+                            If (mFileAInfo.Length > MAX_FILE_SIZE) Then
+                                Continue While
+                            End If
 
-                        Dim mHashA As Byte() = m_HashCache(sFileA)
-                        If (mHashA.Length > 0) Then
-                            Continue While
-                        End If
+                            Try
+                                Select Case (iHashingMethod)
+                                    Case ENUM_HASHING_METHOD.SKIA
+                                        SyncLock mSafeRegionLock
+                                            Using i = SkiaSharp.SKBitmap.Decode(sFileA)
+                                                If (i Is Nothing) Then
+                                                    Continue While
+                                                End If
 
-                        Dim mFileAInfo As New IO.FileInfo(sFileA)
-                        If (mFileAInfo.Length > MAX_FILE_SIZE) Then
-                            Continue While
-                        End If
+                                                ' Success
+                                            End Using
+                                        End SyncLock
 
-                        Try
+                                    Case ENUM_HASHING_METHOD.MAGICK
+                                        SyncLock mSafeRegionLock
+                                            Using mImage As New ImageMagick.MagickImage(sFileA)
+                                                ' Success
+                                            End Using
+                                        End SyncLock
+
+                                    Case ENUM_HASHING_METHOD.GDI
+                                        SyncLock mSafeRegionLock
+                                            Using mImage As Image = Image.FromFile(sFileA)
+                                                ' Success
+                                            End Using
+                                        End SyncLock
+
+                                    Case Else
+                                        Continue While
+                                End Select
+                            Catch ex As Threading.ThreadAbortException
+                                Throw
+                            Catch ex As Exception
+                                Continue While
+                            End Try
+
                             Select Case (iHashingMethod)
                                 Case ENUM_HASHING_METHOD.SKIA
-                                    Using i = SkiaSharp.SKBitmap.Decode(sFileA)
-                                        If (i Is Nothing) Then
-                                            Continue While
-                                        End If
-
-                                        ' Success
-                                    End Using
+                                    SyncLock mSafeRegionLock
+                                        Dim mHasher As New ClassHasherSkia
+                                        m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
+                                    End SyncLock
 
                                 Case ENUM_HASHING_METHOD.MAGICK
-                                    Using mImage As New ImageMagick.MagickImage(sFileA)
-                                        ' Success
-                                    End Using
+                                    SyncLock mSafeRegionLock
+                                        Dim mHasher As New ClassHasherMagick
+                                        m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
+                                    End SyncLock
 
                                 Case ENUM_HASHING_METHOD.GDI
-                                    Using mImage As Image = Image.FromFile(sFileA)
-                                        ' Success
-                                    End Using
+                                    SyncLock mSafeRegionLock
+                                        Dim mHasher As New ClassHasherGdi
+                                        m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
+                                    End SyncLock
 
                                 Case Else
                                     Continue While
                             End Select
-                        Catch ex As ClassThread.ThreadAbortException
-                            Throw
-                        Catch ex As Exception
-                            Continue While
-                        End Try
-
-                        Select Case (iHashingMethod)
-                            Case ENUM_HASHING_METHOD.SKIA
-                                Dim mHasher As New ClassHasherSkia
-                                m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
-
-                            Case ENUM_HASHING_METHOD.MAGICK
-                                Dim mHasher As New ClassHasherMagick
-                                m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
-
-                            Case ENUM_HASHING_METHOD.GDI
-                                Dim mHasher As New ClassHasherGdi
-                                m_HashCache(sFileA) = mHasher.GetHash(sFileA, CUInt(iThumbSize), m_HighQualityHashing)
-
-                            Case Else
+                        Else
+                            Dim mHashA As KeyValuePair(Of Integer, Byte()) = Nothing
+                            If (Not mHashCacheItems.TryGetValue(sFileA, mHashA)) Then
                                 Continue While
-                        End Select
-                    Else
-                        Dim mHashA As KeyValuePair(Of Integer, Byte()) = Nothing
-                        If (Not mHashCacheItems.TryGetValue(sFileA, mHashA)) Then
-                            Continue While
-                        End If
+                            End If
 
-                        mHashCacheItems.Remove(sFileA)
+                            mHashCacheItems.Remove(sFileA)
 
-                        Dim iHashA As Byte() = mHashA.Value
-                        If (iHashA.Length = 0) Then
-                            Continue While
-                        End If
+                            Dim iHashA As Byte() = mHashA.Value
+                            If (iHashA.Length = 0) Then
+                                Continue While
+                            End If
 
-                        Dim iMaxThreshold As Double = (iMaxImageDiff / 100)
+                            Dim iMaxThreshold As Double = (iMaxImageDiff / 100)
 
-                        For Each mFileB In mHashCacheItems
-                            Try
-                                Dim mHashB = mFileB.Value
-                                Dim sFileB As String = mFileB.Key
+                            For Each mFileB In mHashCacheItems
+                                Try
+                                    Dim mHashB = mFileB.Value
+                                    Dim sFileB As String = mFileB.Key
 
-                                If (mCancelToken.IsCancellationRequested) Then
-                                    Throw New ClassThread.ThreadAbortException
-                                End If
+                                    Dim iHashB As Byte() = mHashB.Value
+                                    If (iHashB.Length = 0) Then
+                                        Continue For
+                                    End If
 
-                                Dim iHashB As Byte() = mHashB.Value
-                                If (iHashB.Length = 0) Then
-                                    Continue For
-                                End If
+                                    ' Check possible thresholds
+                                    If (True) Then
+                                        Dim iHashADiff As Double = mHashA.Key / iHashA.Length
+                                        Dim iHashBDiff As Double = mHashB.Key / iHashB.Length
 
-                                ' Check possible thresholds
-                                If (True) Then
-                                    Dim iHashADiff As Double = mHashA.Key / iHashA.Length
-                                    Dim iHashBDiff As Double = mHashB.Key / iHashB.Length
+                                        If (iHashADiff > 0 AndAlso iHashADiff > iHashBDiff) Then
+                                            If ((iHashBDiff / iHashADiff) < iMaxThreshold) Then
+                                                Continue For
+                                            End If
+                                        End If
 
-                                    If (iHashADiff > 0 AndAlso iHashADiff > iHashBDiff) Then
-                                        If ((iHashBDiff / iHashADiff) < iMaxThreshold) Then
-                                            Continue For
+                                        If (iHashBDiff > 0 AndAlso iHashBDiff > iHashADiff) Then
+                                            If ((iHashADiff / iHashBDiff) < iMaxThreshold) Then
+                                                Continue For
+                                            End If
                                         End If
                                     End If
 
-                                    If (iHashBDiff > 0 AndAlso iHashBDiff > iHashADiff) Then
-                                        If ((iHashADiff / iHashBDiff) < iMaxThreshold) Then
+                                    Dim iAvgDiff As Double = 0.0
+
+                                    Select Case (iHashingMethod)
+                                        Case ENUM_HASHING_METHOD.SKIA
+                                            SyncLock mSafeRegionLock
+                                                Dim mHasher As New ClassHasherSkia
+                                                iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
+                                            End SyncLock
+
+                                        Case ENUM_HASHING_METHOD.MAGICK
+                                            SyncLock mSafeRegionLock
+                                                Dim mHasher As New ClassHasherMagick
+                                                iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
+                                            End SyncLock
+
+                                        Case ENUM_HASHING_METHOD.GDI
+                                            SyncLock mSafeRegionLock
+                                                Dim mHasher As New ClassHasherGdi
+                                                iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
+                                            End SyncLock
+
+                                        Case Else
+                                            Continue For
+                                    End Select
+
+                                    If (iAvgDiff < iMaxThreshold) Then
+                                        Continue For
+                                    End If
+
+                                    SyncLock g_mThreadLock
+                                        ' Skip if the pair already exists
+                                        If (mImagePairs.ContainsKey(sFileB) AndAlso mImagePairs(sFileB).ContainsKey(sFileA)) Then
                                             Continue For
                                         End If
-                                    End If
-                                End If
 
-                                Dim iAvgDiff As Double = 0.0
+                                        ' Skip if the pair already exists
+                                        If (mImagePairs.ContainsKey(sFileA) AndAlso mImagePairs(sFileA).ContainsKey(sFileB)) Then
+                                            Continue For
+                                        End If
 
-                                Select Case (iHashingMethod)
-                                    Case ENUM_HASHING_METHOD.SKIA
-                                        Dim mHasher As New ClassHasherSkia
-                                        iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
+                                        If (Not mImagePairs.ContainsKey(sFileA)) Then
+                                            mImagePairs(sFileA) = New Dictionary(Of String, STRUC_IMAGE_INFO)
+                                            mImagePairs(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1.0, New IO.FileInfo(sFileA).Length, iHashA)
+                                        End If
 
-                                    Case ENUM_HASHING_METHOD.MAGICK
-                                        Dim mHasher As New ClassHasherMagick
-                                        iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
+                                        mImagePairs(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length, iHashB)
+                                    End SyncLock
 
-                                    Case ENUM_HASHING_METHOD.GDI
-                                        Dim mHasher As New ClassHasherGdi
-                                        iAvgDiff = mHasher.GetSimilarity(iHashA, iHashB, iMaxThreshold)
-
-                                    Case Else
-                                        Continue For
-                                End Select
-
-                                If (iAvgDiff < iMaxThreshold) Then
-                                    Continue For
-                                End If
-
-                                SyncLock g_mThreadLock
-                                    ' Skip if the pair already exists
-                                    If (mImageInfo.ContainsKey(sFileB) AndAlso mImageInfo(sFileB).ContainsKey(sFileA)) Then
-                                        Continue For
-                                    End If
-
-                                    ' Skip if the pair already exists
-                                    If (mImageInfo.ContainsKey(sFileA) AndAlso mImageInfo(sFileA).ContainsKey(sFileB)) Then
-                                        Continue For
-                                    End If
-
-                                    If (Not mImageInfo.ContainsKey(sFileA)) Then
-                                        mImageInfo(sFileA) = New Dictionary(Of String, STRUC_IMAGE_INFO)
-                                        mImageInfo(sFileA)(sFileA) = New STRUC_IMAGE_INFO(sFileA, 1.0, New IO.FileInfo(sFileA).Length, iHashA)
-                                    End If
-
-                                    mImageInfo(sFileA)(sFileB) = New STRUC_IMAGE_INFO(sFileB, iAvgDiff, New IO.FileInfo(sFileB).Length, iHashB)
-                                End SyncLock
-
-                            Catch ex As ClassThread.ThreadAbortException
-                                Throw
-                            Catch ex As Exception
-                                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-                            End Try
-                        Next
-                    End If
-                Catch ex As ClassThread.ThreadAbortException
-                    Throw
-                Catch ex As Exception
-                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-                End Try
-            End While
+                                Catch ex As Threading.ThreadAbortException
+                                    Throw
+                                Catch ex As Exception
+                                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                                End Try
+                            Next
+                        End If
+                    Catch ex As Threading.ThreadAbortException
+                        Throw
+                    Catch ex As Exception
+                        MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    End Try
+                End While
+            Catch ex As Threading.ThreadAbortException
+                Throw
+            Catch ex As Exception
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
         End Sub
 
         Interface IImageHasher(Of T)
